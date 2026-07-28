@@ -29,7 +29,7 @@ Thank you to Lisa Wang, Nikola Jovanović & Ameya Daigavane.
 
 ## Quick Start
 
-[**Quick Start** ](#quick-start)|[ **Documentation** ](https://jraph.readthedocs.io/en/latest/)
+[**Quick Start** ](#quick-start)
 
 Jraph (pronounced "giraffe") is a lightweight library for working with graph
 neural networks in jax. It provides a data structure for graphs, a set of
