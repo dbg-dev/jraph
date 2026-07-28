@@ -254,6 +254,7 @@ wheels = [
 
 [[package]]
 name = "jraph"
+version = "0.0.6.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "jax", version = "0.10.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },

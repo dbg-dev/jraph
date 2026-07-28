@@ -71,8 +71,12 @@ from jraph._src.utils import unpad_with_graphs
 from jraph._src.utils import with_zero_out_padding_outputs
 from jraph._src.utils import zero_out_padding
 
+# move to uv build and versioning
+from importlib.metadata import version as _package_version
 
-__version__ = "0.0.6.dev0"
+__version__ = _package_version("jraph")
+
+
 
 __all__ = ("ArrayTree", "DeepSets", "GraphConvolution", "GraphMapFeatures",
            "InteractionNetwork", "RelationNetwork", "GraphNetGAT", "GAT",
