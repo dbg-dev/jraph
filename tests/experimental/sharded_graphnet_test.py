@@ -19,7 +19,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import jax
 import jraph
-from jraph._src import utils
+from jraph import utils
 from jraph.experimental import sharded_graphnet
 import numpy as np
 

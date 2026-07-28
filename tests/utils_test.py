@@ -20,8 +20,8 @@ from absl.testing import parameterized
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
-from jraph._src import graph
-from jraph._src import utils
+from jraph import graph
+from jraph import utils
 import numpy as np
 
 

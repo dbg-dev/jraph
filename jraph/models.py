@@ -20,8 +20,8 @@ from typing import Any, Callable, Iterable, Mapping, Optional, Union
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
-from jraph._src import graph as gn_graph
-from jraph._src import utils
+from . import graph as gn_graph
+from . import utils
 
 # As of 04/2020 pytype doesn't support recursive types.
 # pytype: disable=not-supported-yet

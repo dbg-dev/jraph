@@ -20,9 +20,9 @@ import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
 
-from jraph._src import graph
-from jraph._src import models
-from jraph._src import utils
+from jraph import graph
+from jraph import models
+from jraph import utils
 import numpy as np
 
 
