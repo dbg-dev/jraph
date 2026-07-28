@@ -60,6 +60,18 @@ dev = [
     "absl-py>=0.9",
     "pytest>=8",
 ]
+test = [
+    "absl-py>=2.5.0",
+    "dm-haiku>=0.0.17",
+    "dm-tree>=0.1.10",
+    "flax>=0.12.8",
+    "jax>=0.10.2",
+    "jaxlib>=0.10.2",
+    "optax>=0.2.8",
+    "pandas>=3.0.5",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
 
 [project.urls]
 Upstream = "https://github.com/google-deepmind/jraph"
@@ -71,3 +83,12 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "jraph"
 module-root = ""
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-config",
+    "--strict-markers",
+]

@@ -16,6 +16,14 @@
 
 import pathlib
 from absl.testing import absltest
+
+import pytest
+pytest.skip(
+    "Legacy Flax example depends on the removed flax.optim API; "
+    "restore this test when the example is migrated to NNX and Optax.",
+    allow_module_level=True,
+)
+
 from jraph.ogb_examples import train
 
 

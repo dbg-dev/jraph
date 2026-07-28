@@ -21,7 +21,7 @@ import jraph
 from jraph.ogb_examples import data_utils
 import numpy as np
 import tree
-
+import pytest
 
 class DataUtilsTest(parameterized.TestCase):
 
@@ -39,7 +39,7 @@ class DataUtilsTest(parameterized.TestCase):
         globals={'label': np.array([1], dtype=np.int32)},
         n_node=np.array([10], dtype=np.int32),
         n_edge=np.array([40], dtype=np.int32))
-    ogb_path = pathlib.Path(data_utils.__file__).parents[0]
+    ogb_path = pathlib.Path(__file__).resolve().parent # pathlib.Path(data_utils.__file__).parents[0]
     master_csv_path = pathlib.Path(ogb_path, 'test_data', 'master.csv')
     split_path = pathlib.Path(ogb_path, 'test_data', 'train.csv.gz')
     data_path = master_csv_path.parents[0]

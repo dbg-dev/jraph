@@ -174,7 +174,7 @@ def graphs_tuple_to_broadcasted_sharded_graphs_tuple(
   def shard_edges(edge_features):
     return np.reshape(edge_features, (num_shards, -1) + edge_features.shape[1:])
 
-  edges = jax.tree_map(shard_edges, edges)
+  edges = jax.tree.map(shard_edges, edges)
   # Our sharded strategy is by edges - which means we need a device local
   # n_edge, senders and receivers to do global aggregations.
 
@@ -255,14 +255,14 @@ def graphs_tuple_to_broadcasted_sharded_graphs_tuple(
   device_graph_idx = np.array(
       [pad(x) for x in completed_splits['device_graph_idx']])
   return ShardedEdgesGraphsTuple(
-      nodes=jax.tree_map(broadcast, nodes),
+      nodes=jax.tree.map(broadcast, nodes),
       device_edges=edges,
       device_receivers=device_receivers,
       device_senders=device_senders,
       receivers=broadcast(receivers),
       senders=broadcast(senders),
       device_graph_idx=device_graph_idx,
-      globals=jax.tree_map(broadcast, globals_),
+      globals=jax.tree.map(broadcast, globals_),
       n_node=broadcast(n_node),
       n_edge=broadcast(n_edge),
       device_n_edge=device_n_edge)
