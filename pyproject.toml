@@ -1,0 +1,78 @@
+[project]
+name = "jraph"
+dynamic = ["version"]
+description = "Jraph: A library for graph neural networks in JAX"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+
+authors = [
+    { name = "DeepMind", email = "jax_graph_nets@google.com" },
+]
+
+maintainers = [
+    { name = "minky.raccoon", email = "minky.raccoon@pm.me" },
+]
+
+keywords = [
+    "jax",
+    "graph-neural-networks",
+    "machine-learning",
+]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "jax>=0.1.55",
+    "jaxlib>=0.1.37",
+    "numpy>=1.18.0",
+]
+
+[project.optional-dependencies]
+examples = [
+    "absl-py>=0.9",
+    "dm-haiku>=0.0.2",
+    "frozendict>=2.0.2",
+    "optax>=0.0.1",
+    "scipy>=1.2.1",
+]
+
+ogb_examples = [
+    "absl-py>=0.9",
+    "dm-haiku>=0.0.2",
+    "dm-tree>=0.1.5",
+    "optax>=0.0.1",
+    "pandas>=1.0.5",
+]
+
+[dependency-groups]
+dev = [
+    "absl-py>=0.9",
+    "pytest>=8",
+]
+
+[project.urls]
+Upstream = "https://github.com/google-deepmind/jraph"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = { attr = "jraph.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["jraph*"]
+
+[tool.setuptools.package-data]
+jraph = ["ogb_examples/test_data/*"]
