@@ -3,7 +3,7 @@ name = "jraph"
 version = "0.0.6.dev0"
 description = "Jraph: A library for graph neural networks in JAX"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 
