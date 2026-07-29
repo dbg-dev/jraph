@@ -21,7 +21,6 @@ import jraph
 from jraph.ogb_examples import data_utils
 import numpy as np
 import tree
-import pytest
 
 class DataUtilsTest(parameterized.TestCase):
 
