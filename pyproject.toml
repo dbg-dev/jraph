@@ -33,6 +33,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "flax>=0.12.8",
     "jax>=0.1.55",
     "jaxlib>=0.1.37",
     "numpy>=1.18.0",
