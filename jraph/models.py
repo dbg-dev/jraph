@@ -13,17 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """A library of Graph Neural Network models."""
-
 import functools
-from typing import Any, Callable, Iterable, Mapping, Optional, Union
-
+from typing import Callable
+from collections.abc import Mapping
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
-from . import graph as gn_graph
-from . import utils
+
+from jraph.graph import GraphsTuple
 from jraph._types import (
-  ArrayTree,
   NodeFeatures,
   EdgeFeatures,
   SenderFeatures,
@@ -39,20 +37,19 @@ from jraph._types import (
   GNUpdateGlobalFn,
   GNUpdateNodeFn
 )
+from jraph.utils import segment_sum, segment_softmax
 
 def GraphNetwork(
-    update_edge_fn: Optional[GNUpdateEdgeFn],
-    update_node_fn: Optional[GNUpdateNodeFn],
-    update_global_fn: Optional[GNUpdateGlobalFn] = None,
-    aggregate_edges_for_nodes_fn: AggregateEdgesToNodesFn = utils.segment_sum,
-    aggregate_nodes_for_globals_fn: AggregateNodesToGlobalsFn = utils
-    .segment_sum,
-    aggregate_edges_for_globals_fn: AggregateEdgesToGlobalsFn = utils
-    .segment_sum,
-    attention_logit_fn: Optional[AttentionLogitFn] = None,
-    attention_normalize_fn: Optional[AttentionNormalizeFn] = utils
-    .segment_softmax,
-    attention_reduce_fn: Optional[AttentionReduceFn] = None):
+    update_edge_fn: GNUpdateEdgeFn | None,
+    update_node_fn: GNUpdateNodeFn | None,
+    update_global_fn: GNUpdateGlobalFn | None= None,
+    aggregate_edges_for_nodes_fn: AggregateEdgesToNodesFn = segment_sum,
+    aggregate_nodes_for_globals_fn: AggregateNodesToGlobalsFn = segment_sum,
+    aggregate_edges_for_globals_fn: AggregateEdgesToGlobalsFn = segment_sum,
+    attention_logit_fn: AttentionLogitFn | None = None,
+    attention_normalize_fn: AttentionNormalizeFn | None = segment_softmax,
+    attention_reduce_fn: AttentionReduceFn | None = None
+) -> Callable[..., GraphsTuple]:
   """Returns a method that applies a configured GraphNetwork.
 
   This implementation follows Algorithm 1 in https://arxiv.org/abs/1806.01261
@@ -97,11 +94,12 @@ def GraphNetwork(
     A method that applies the configured GraphNetwork.
   """
   not_both_supplied = lambda x, y: (x != y) and ((x is None) or (y is None))
+  
   if not_both_supplied(attention_reduce_fn, attention_logit_fn):
     raise ValueError(('attention_logit_fn and attention_reduce_fn must both be'
                       ' supplied.'))
 
-  def _ApplyGraphNet(graph):
+  def _ApplyGraphNet(graph: GraphsTuple) -> GraphsTuple:
     """Applies a configured GraphNetwork to a graph.
 
     This implementation follows Algorithm 1 in https://arxiv.org/abs/1806.01261
@@ -188,7 +186,7 @@ def GraphNetwork(
       # These pooled nodes are the inputs to the global update fn.
       globals_ = update_global_fn(node_attributes, edge_attribtutes, globals_)
     # pylint: enable=g-long-lambda
-    return gn_graph.GraphsTuple(
+    return GraphsTuple(
         nodes=nodes,
         edges=edges,
         receivers=receivers,
@@ -200,26 +198,27 @@ def GraphNetwork(
   return _ApplyGraphNet
 
 
-InteractionUpdateNodeFn = Callable[
+type InteractionUpdateNodeFn = Callable[
     [NodeFeatures,
      Mapping[str, SenderFeatures],
      Mapping[str, ReceiverFeatures]],
     NodeFeatures]
-InteractionUpdateNodeFnNoSentEdges = Callable[
+
+type InteractionUpdateNodeFnNoSentEdges = Callable[
     [NodeFeatures,
      Mapping[str, ReceiverFeatures]],
     NodeFeatures]
 
-InteractionUpdateEdgeFn = Callable[
+type InteractionUpdateEdgeFn = Callable[
     [EdgeFeatures, SenderFeatures, ReceiverFeatures], EdgeFeatures]
 
 
 def InteractionNetwork(
     update_edge_fn: InteractionUpdateEdgeFn,
-    update_node_fn: Union[InteractionUpdateNodeFn,
-                          InteractionUpdateNodeFnNoSentEdges],
-    aggregate_edges_for_nodes_fn: AggregateEdgesToNodesFn = utils.segment_sum,
-    include_sent_messages_in_node_update: bool = False):
+    update_node_fn: InteractionUpdateNodeFn | InteractionUpdateNodeFnNoSentEdges,
+    aggregate_edges_for_nodes_fn: AggregateEdgesToNodesFn = segment_sum,
+    include_sent_messages_in_node_update: bool = False
+) -> Callable[..., GraphsTuple]:
   """Returns a method that applies a configured InteractionNetwork.
 
   An interaction network computes interactions on the edges based on the
@@ -262,20 +261,21 @@ def InteractionNetwork(
 
 # Signature:
 # edge features -> embedded edge features
-EmbedEdgeFn = Callable[[EdgeFeatures], EdgeFeatures]
+type EmbedEdgeFn = Callable[[EdgeFeatures], EdgeFeatures]
 
 # Signature:
 # node features -> embedded node features
-EmbedNodeFn = Callable[[NodeFeatures], NodeFeatures]
+type EmbedNodeFn = Callable[[NodeFeatures], NodeFeatures]
 
 # Signature:
 # globals features -> embedded globals features
-EmbedGlobalFn = Callable[[Globals], Globals]
+type EmbedGlobalFn = Callable[[Globals], Globals]
 
 
-def GraphMapFeatures(embed_edge_fn: Optional[EmbedEdgeFn] = None,
-                     embed_node_fn: Optional[EmbedNodeFn] = None,
-                     embed_global_fn: Optional[EmbedGlobalFn] = None):
+def GraphMapFeatures(embed_edge_fn: EmbedEdgeFn | None = None,
+                     embed_node_fn: EmbedNodeFn | None = None,
+                     embed_global_fn: EmbedGlobalFn | None = None
+) -> Callable[..., GraphsTuple]:
   """Returns function which embeds the components of a graph independently.
 
   Args:
@@ -288,7 +288,7 @@ def GraphMapFeatures(embed_edge_fn: Optional[EmbedEdgeFn] = None,
   embed_nodes_fn = embed_node_fn if embed_node_fn else identity
   embed_global_fn = embed_global_fn if embed_global_fn else identity
 
-  def Embed(graphs_tuple):
+  def Embed(graphs_tuple: GraphsTuple) -> GraphsTuple:
     return graphs_tuple._replace(
         nodes=embed_nodes_fn(graphs_tuple.nodes),
         edges=embed_edges_fn(graphs_tuple.edges),
@@ -301,7 +301,7 @@ def RelationNetwork(
     update_edge_fn: Callable[[SenderFeatures, ReceiverFeatures], EdgeFeatures],
     update_global_fn: Callable[[EdgeFeatures], NodeFeatures],
     aggregate_edges_for_globals_fn:
-        AggregateEdgesToGlobalsFn = utils.segment_sum):
+        AggregateEdgesToGlobalsFn = segment_sum) -> Callable[..., GraphsTuple]:
   """Returns a method that applies a Relation Network.
 
   See https://arxiv.org/abs/1706.01427 for more details.
@@ -328,7 +328,7 @@ def DeepSets(
     update_node_fn: Callable[[NodeFeatures, Globals], NodeFeatures],
     update_global_fn: Callable[[NodeFeatures], Globals],
     aggregate_nodes_for_globals_fn:
-        AggregateNodesToGlobalsFn = utils.segment_sum):
+        AggregateNodesToGlobalsFn = segment_sum) -> Callable[..., GraphsTuple]:
   """Returns a method that applies a DeepSets layer.
 
   Implementation for the model described in https://arxiv.org/abs/1703.06114
@@ -362,13 +362,11 @@ def GraphNetGAT(
     update_node_fn: GNUpdateNodeFn,
     attention_logit_fn: AttentionLogitFn,
     attention_reduce_fn: AttentionReduceFn,
-    update_global_fn: Optional[GNUpdateGlobalFn] = None,
-    aggregate_edges_for_nodes_fn: AggregateEdgesToNodesFn = utils.segment_sum,
-    aggregate_nodes_for_globals_fn: AggregateNodesToGlobalsFn = utils.
-    segment_sum,
-    aggregate_edges_for_globals_fn: AggregateEdgesToGlobalsFn = utils.
-    segment_sum
-    ):
+    update_global_fn: GNUpdateGlobalFn | None = None,
+    aggregate_edges_for_nodes_fn: AggregateEdgesToNodesFn = segment_sum,
+    aggregate_nodes_for_globals_fn: AggregateNodesToGlobalsFn = segment_sum,
+    aggregate_edges_for_globals_fn: AggregateEdgesToGlobalsFn = segment_sum
+    ) -> Callable[..., GraphsTuple]:
   """Returns a method that applies a GraphNet with attention on edge features.
 
   Args:
@@ -392,6 +390,7 @@ def GraphNetGAT(
   if (attention_logit_fn is None) or (attention_reduce_fn is None):
     raise ValueError(('`None` value not supported for `attention_logit_fn` or '
                       '`attention_reduce_fn` in a Graph Attention network.'))
+
   return GraphNetwork(
       update_edge_fn=update_edge_fn,
       update_node_fn=update_node_fn,
@@ -411,7 +410,7 @@ GATNodeUpdateFn = Callable[[NodeFeatures], NodeFeatures]
 
 def GAT(attention_query_fn: GATAttentionQueryFn,
         attention_logit_fn: GATAttentionLogitFn,
-        node_update_fn: Optional[GATNodeUpdateFn] = None):
+        node_update_fn: GATNodeUpdateFn | None = None) -> Callable[..., GraphsTuple]:
   """Returns a method that applies a Graph Attention Network layer.
 
   Graph Attention message passing as described in
@@ -439,7 +438,9 @@ def GAT(attention_query_fn: GATAttentionQueryFn,
     # feature axis.
     node_update_fn = lambda x: jnp.reshape(
         jax.nn.leaky_relu(x), (x.shape[0], -1))
-  def _ApplyGAT(graph):
+
+
+  def _ApplyGAT(graph: GraphsTuple) -> GraphsTuple:
     """Applies a Graph Attention layer."""
     nodes, edges, receivers, senders, _, _, _ = graph
     # Equivalent to the sum of n_node, but statically known.
@@ -459,12 +460,12 @@ def GAT(attention_query_fn: GATAttentionQueryFn,
         sent_attributes, received_attributes, edges)
 
     # Compute the softmax weights on the entire tree.
-    weights = utils.segment_softmax(softmax_logits, segment_ids=receivers,
+    weights = segment_softmax(softmax_logits, segment_ids=receivers,
                                     num_segments=sum_n_node)
     # Apply weights
     messages = sent_attributes * weights
     # Aggregate messages to nodes.
-    nodes = utils.segment_sum(messages, receivers, num_segments=sum_n_node)
+    nodes = segment_sum(messages, receivers, num_segments=sum_n_node)
 
     # Apply an update function to the aggregated messages.
     nodes = node_update_fn(nodes)
@@ -475,9 +476,9 @@ def GAT(attention_query_fn: GATAttentionQueryFn,
 
 def GraphConvolution(
     update_node_fn: Callable[[NodeFeatures], NodeFeatures],
-    aggregate_nodes_fn: AggregateEdgesToNodesFn = utils.segment_sum,
+    aggregate_nodes_fn: AggregateEdgesToNodesFn = segment_sum,
     add_self_edges: bool = False,
-    symmetric_normalization: bool = True):
+    symmetric_normalization: bool = True) -> Callable[..., GraphsTuple]:
   """Returns a method that applies a Graph Convolution layer.
 
   Graph Convolutional layer as in https://arxiv.org/abs/1609.02907,
@@ -501,7 +502,7 @@ def GraphConvolution(
   Returns:
     A method that applies a Graph Convolution layer.
   """
-  def _ApplyGCN(graph):
+  def _ApplyGCN(graph: GraphsTuple) -> GraphsTuple:
     """Applies a Graph Convolution layer."""
     nodes, _, receivers, senders, _, _, _ = graph
 
@@ -526,7 +527,7 @@ def GraphConvolution(
     # pylint: disable=g-long-lambda
     if symmetric_normalization:
       # Calculate the normalization values.
-      count_edges = lambda x: utils.segment_sum(
+      count_edges = lambda x: segment_sum(
           jnp.ones_like(conv_senders), x, total_num_nodes)
       sender_degree = count_edges(conv_senders)
       receiver_degree = count_edges(conv_receivers)
