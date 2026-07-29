@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import cast
 
 import jax
+import optax
 import jax.numpy as jnp
 import numpy as np
 from flax import nnx
@@ -12,6 +12,8 @@ from examples.pygcn.training import (
     loss_fn,
     masked_accuracy,
     masked_cross_entropy,
+    eval_step, 
+    train_step
 )
 
 
@@ -151,3 +153,57 @@ def test_compiled_loss_and_grad_match_eager_execution() -> None:
         compiled_state,
         eager_state,
     )
+
+
+def test_training_reduces_cora_loss() -> None:
+    dataset = load_cora(DATA_PATH)
+
+    model = TwoLayerGCN(
+        in_features=1433,
+        hidden_features=16,
+        out_features=7,
+        # Disable dropout to make this unit test deterministic.
+        dropout_rate=0.0,
+        rngs=nnx.Rngs(0),
+    )
+
+    train_model = nnx.view(
+        model,
+        deterministic=False,
+    )
+    eval_model = nnx.view(
+        model,
+        deterministic=True,
+    )
+
+    optimizer = nnx.Optimizer(
+        model,
+        optax.adam(learning_rate=0.01),
+        wrt=nnx.Param,
+    )
+
+    before = eval_step(
+        eval_model,
+        dataset.graph,
+        dataset.labels,
+        dataset.train_mask,
+    )
+
+    for _ in range(25):
+        train_step(
+            train_model,
+            optimizer,
+            dataset.graph,
+            dataset.labels,
+            dataset.train_mask,
+        )
+
+    after = eval_step(
+        eval_model,
+        dataset.graph,
+        dataset.labels,
+        dataset.train_mask,
+    )
+
+    assert float(after.loss) < float(before.loss)
+    assert int(optimizer.step[...]) == 25
