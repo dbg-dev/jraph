@@ -1,5 +1,4 @@
 import jax
-import jax.numpy as jnp
 from typing import Callable, Hashable
 from collections.abc import Iterable, Mapping
 
@@ -22,7 +21,7 @@ AggregateEdgesToNodesFn = Callable[
 # (nodes of each graph to be aggregated, segment ids, number of segments) ->
 # aggregated nodes
 AggregateNodesToGlobalsFn = Callable[
-  [NodeFeatures, jnp.ndarray, int],
+  [NodeFeatures, jax.Array, int],
   Globals
 ]
 
@@ -30,7 +29,7 @@ AggregateNodesToGlobalsFn = Callable[
 # (edges of each graph to be aggregated, segment ids, number of segments) ->
 # aggregated edges
 AggregateEdgesToGlobalsFn = Callable[
-  [EdgeFeatures, jnp.ndarray, int],
+  [EdgeFeatures, jax.Array, int],
   Globals
 ]
 
@@ -48,7 +47,7 @@ AttentionReduceFn = Callable[[EdgeFeatures, ArrayTree], EdgeFeatures]
 # (edges to be normalized, segment ids, number of segments) ->
 # normalized edges
 AttentionNormalizeFn = Callable[
-  [EdgeFeatures, jnp.ndarray, int], 
+  [EdgeFeatures, jax.Array, int], 
   EdgeFeatures
 ]
 
