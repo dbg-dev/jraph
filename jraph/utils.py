@@ -12,37 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utilities for working with `GraphsTuple`s."""
-
 import functools
-from typing import (
-    Any,
-    Callable,
-    Generator,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Union,
-)
-
+from typing import Callable
+from collections.abc import Generator, Iterator, Sequence
 import jax
 from jax import lax
 import jax.numpy as jnp
 import jax.tree_util as tree
-from . import graph as gn_graph
 import numpy as np
 from jraph._types import ArrayTree
+from jraph.graph import GraphsTuple
 
 
 def segment_sum(
-    data: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    data: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
-):
+) -> jax.Array:
     """Computes the sum within segments of an array.
 
     Jraph alias to `jax.ops.segment_sum
@@ -94,12 +82,12 @@ def segment_sum(
 
 
 def segment_mean(
-    data: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    data: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
-):
+) -> jax.Array:
     """Returns mean for each segment.
 
     Args:
@@ -129,12 +117,12 @@ def segment_mean(
 
 
 def segment_variance(
-    data: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    data: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
-):
+) -> jax.Array:
     """Returns the variance for each segment.
 
     Args:
@@ -176,13 +164,13 @@ def segment_variance(
 
 
 def segment_normalize(
-    data: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    data: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
-    eps=1e-8,
-):
+    eps = 1e-8,
+) -> jax.Array:
     """Normalizes data within each segment.
 
     Args:
@@ -219,12 +207,12 @@ def segment_normalize(
 
 
 def segment_max(
-    data: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    data: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
-):
+) -> jax.Array:
     """Alias for jax.ops.segment_max.
 
     Args:
@@ -251,11 +239,11 @@ def segment_max(
 
 
 def _replace_empty_segments_with_constant(
-    aggregated_segments: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    aggregated_segments: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     constant: float = 0.0,
-):
+) -> jax.Array:
     """Replaces the values of empty segments with constants."""
     result_shape = (len(segment_ids),) + aggregated_segments.shape[1:]
     num_elements_in_segment = segment_sum(
@@ -269,13 +257,13 @@ def _replace_empty_segments_with_constant(
 
 
 def segment_min_or_constant(
-    data: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    data: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
     constant: float = 0.0,
-):
+) -> jax.Array:
     """As segment_min, but returns a constant for empty segments.
 
     `segment_min` returns `-inf` for empty segments, which can cause `nan`s in the
@@ -311,13 +299,13 @@ def segment_min_or_constant(
 
 
 def segment_max_or_constant(
-    data: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    data: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
     constant: float = 0.0,
-):
+) -> jax.Array:
     """As segment_max, but returns a constant for empty segments.
 
     `segment_max` returns `-inf` for empty segments, which can cause `nan`s in the
@@ -353,12 +341,12 @@ def segment_max_or_constant(
 
 
 def segment_min(
-    data: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    data: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
-):
+) -> jax.Array:
     """Computes the min within segments of an array.
 
     Similar to TensorFlow's segment_min:
@@ -388,9 +376,9 @@ def segment_min(
 
 
 def segment_softmax(
-    logits: jnp.ndarray,
-    segment_ids: jnp.ndarray,
-    num_segments: Optional[int] = None,
+    logits: jax.Array,
+    segment_ids: jax.Array,
+    num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
 ) -> ArrayTree:
@@ -399,8 +387,8 @@ def segment_softmax(
     For a given tree of logits that can be divded into segments, computes a
     softmax over the segments.
 
-      logits = jnp.ndarray([1.0, 2.0, 3.0, 1.0, 2.0])
-      segment_ids = jnp.ndarray([0, 0, 0, 1, 1])
+      logits = jax.Array([1.0, 2.0, 3.0, 1.0, 2.0])
+      segment_ids = jax.Array([0, 0, 0, 1, 1])
       segment_softmax(logits, segments)
       >> DeviceArray([0.09003057, 0.24472848, 0.66524094, 0.26894142, 0.7310586],
       >> dtype=float32)
@@ -439,13 +427,13 @@ def segment_softmax(
 
 
 def partition_softmax(
-    logits: ArrayTree, partitions: jnp.ndarray, sum_partitions: Optional[int] = None
-):
+    logits: ArrayTree, partitions: jax.Array, sum_partitions: int | None = None
+) -> ArrayTree:
     """Compute a softmax within partitions of an array.
 
       For example::
-        logits = jnp.ndarray([1.0, 2.0, 3.0, 1.0, 2.0])
-        partitions = jnp.ndarray([3, 2])
+        logits = jax.Array([1.0, 2.0, 3.0, 1.0, 2.0])
+        partitions = jax.Array([3, 2])
         partition_softmax(node_logits, n_node)
         >> DeviceArray(
         >> [0.09003057, 0.24472848, 0.66524094, 0.26894142, 0.7310586],
@@ -469,7 +457,7 @@ def partition_softmax(
     return segment_softmax(logits, segment_ids, n_partitions, indices_are_sorted=True)
 
 
-def batch(graphs: Sequence[gn_graph.GraphsTuple]) -> gn_graph.GraphsTuple:
+def batch(graphs: Sequence[GraphsTuple]) -> GraphsTuple:
     """Returns a batched graph given a list of graphs.
 
     This method will concatenate the ``nodes``, ``edges`` and ``globals``,
@@ -525,12 +513,12 @@ def batch(graphs: Sequence[gn_graph.GraphsTuple]) -> gn_graph.GraphsTuple:
     return _batch(graphs, np_=jnp)
 
 
-def batch_np(graphs: Sequence[gn_graph.GraphsTuple]) -> gn_graph.GraphsTuple:
+def batch_np(graphs: Sequence[GraphsTuple]) -> GraphsTuple:
     """Numpy implementation of `batch`. See `batch` for more details."""
     return _batch(graphs, np_=np)
 
 
-def _batch(graphs, np_):
+def _batch(graphs, np_) -> GraphsTuple:
     """Returns batched graph given a list of graphs and a numpy-like module."""
     # Calculates offsets for sender and receiver arrays, caused by concatenating
     # the nodes arrays.
@@ -540,7 +528,7 @@ def _batch(graphs, np_):
         concat = lambda *args: np_.concatenate(args)
         return tree.tree_map(concat, *nests)
 
-    return gn_graph.GraphsTuple(
+    return GraphsTuple(
         n_node=np_.concatenate([g.n_node for g in graphs]),
         n_edge=np_.concatenate([g.n_edge for g in graphs]),
         nodes=_map_concat([g.nodes for g in graphs]),
@@ -551,7 +539,7 @@ def _batch(graphs, np_):
     )
 
 
-def unbatch(graph: gn_graph.GraphsTuple) -> List[gn_graph.GraphsTuple]:
+def unbatch(graph: GraphsTuple) -> list[GraphsTuple]:
     """Returns a list of graphs given a batched graph.
 
     This function does not support jax.jit, because the shape of the output
@@ -563,12 +551,12 @@ def unbatch(graph: gn_graph.GraphsTuple) -> List[gn_graph.GraphsTuple]:
     return _unbatch(graph, np_=jnp)
 
 
-def unbatch_np(graph: gn_graph.GraphsTuple) -> List[gn_graph.GraphsTuple]:
+def unbatch_np(graph: GraphsTuple) -> list[GraphsTuple]:
     """Numpy implementation of `unbatch`. See `unbatch` for more details."""
     return _unbatch(graph, np_=np)
 
 
-def _unbatch(graph: gn_graph.GraphsTuple, np_) -> List[gn_graph.GraphsTuple]:
+def _unbatch(graph: GraphsTuple, np_) -> list[GraphsTuple]:
     """Returns a list of graphs given a batched graph."""
 
     def _map_split(nest, indices_or_sections):
@@ -604,7 +592,7 @@ def _unbatch(graph: gn_graph.GraphsTuple, np_) -> List[gn_graph.GraphsTuple]:
         all_receivers[graph_index] -= node_offsets[graph_index - 1]
 
     return [
-        gn_graph.GraphsTuple._make(elements)
+        GraphsTuple._make(elements)
         for elements in zip(
             all_nodes,
             all_edges,
@@ -618,8 +606,8 @@ def _unbatch(graph: gn_graph.GraphsTuple, np_) -> List[gn_graph.GraphsTuple]:
 
 
 def pad_with_graphs(
-    graph: gn_graph.GraphsTuple, n_node: int, n_edge: int, n_graph: int = 2
-) -> gn_graph.GraphsTuple:
+    graph: GraphsTuple, n_node: int, n_edge: int, n_graph: int = 2
+) -> GraphsTuple:
     """Pads a ``GraphsTuple`` to size by adding computation preserving graphs.
 
     The ``GraphsTuple`` is padded by first adding a dummy graph which contains the
@@ -676,7 +664,7 @@ def pad_with_graphs(
         (pad_n_graph,) + leaf.shape[1:], dtype=leaf.dtype
     )
 
-    padding_graph = gn_graph.GraphsTuple(
+    padding_graph = GraphsTuple(
         n_node=np.concatenate(
             [
                 np.array([pad_n_node], dtype=np.int32),
@@ -698,7 +686,7 @@ def pad_with_graphs(
     return _batch([graph, padding_graph], np_=np)
 
 
-def get_number_of_padding_with_graphs_graphs(padded_graph: gn_graph.GraphsTuple) -> int:
+def get_number_of_padding_with_graphs_graphs(padded_graph: GraphsTuple) -> int:
     """Returns number of padding graphs in padded_graph.
 
     Warning: This method only gives results for graphs that have been padded with
@@ -718,7 +706,7 @@ def get_number_of_padding_with_graphs_graphs(padded_graph: gn_graph.GraphsTuple)
     return n_trailing_empty_padding_graphs + 1
 
 
-def get_number_of_padding_with_graphs_nodes(padded_graph: gn_graph.GraphsTuple) -> int:
+def get_number_of_padding_with_graphs_nodes(padded_graph: GraphsTuple) -> int:
     """Returns number of padding nodes in given padded_graph.
 
     Warning: This method only gives results for graphs that have been padded with
@@ -734,7 +722,7 @@ def get_number_of_padding_with_graphs_nodes(padded_graph: gn_graph.GraphsTuple) 
     return padded_graph.n_node[-get_number_of_padding_with_graphs_graphs(padded_graph)]
 
 
-def get_number_of_padding_with_graphs_edges(padded_graph: gn_graph.GraphsTuple) -> int:
+def get_number_of_padding_with_graphs_edges(padded_graph: GraphsTuple) -> int:
     """Returns number of padding edges in given padded_graph.
 
     Warning: This method only gives results for graphs that have been padded with
@@ -750,7 +738,7 @@ def get_number_of_padding_with_graphs_edges(padded_graph: gn_graph.GraphsTuple) 
     return padded_graph.n_edge[-get_number_of_padding_with_graphs_graphs(padded_graph)]
 
 
-def unpad_with_graphs(padded_graph: gn_graph.GraphsTuple) -> gn_graph.GraphsTuple:
+def unpad_with_graphs(padded_graph: GraphsTuple) -> GraphsTuple:
     """Unpads the given graph by removing the dummy graph and empty graphs.
 
     This function assumes that the given graph was padded with the
@@ -769,12 +757,12 @@ def unpad_with_graphs(padded_graph: gn_graph.GraphsTuple) -> gn_graph.GraphsTupl
     n_padding_node = get_number_of_padding_with_graphs_nodes(padded_graph)
     n_padding_edge = get_number_of_padding_with_graphs_edges(padded_graph)
 
-    def remove_edge_padding(edge_array):
+    def remove_edge_padding(edge_array: jax.Array| ArrayTree) -> ArrayTree | jax.Array:
         if n_padding_edge == 0:
             return edge_array
         return edge_array[:-n_padding_edge]
 
-    unpadded_graph = gn_graph.GraphsTuple(
+    unpadded_graph = GraphsTuple(
         n_node=padded_graph.n_node[:-n_padding_graph],
         n_edge=padded_graph.n_edge[:-n_padding_graph],
         nodes=tree.tree_map(lambda x: x[:-n_padding_node], padded_graph.nodes),
@@ -786,7 +774,7 @@ def unpad_with_graphs(padded_graph: gn_graph.GraphsTuple) -> gn_graph.GraphsTupl
     return unpadded_graph
 
 
-def get_node_padding_mask(padded_graph: gn_graph.GraphsTuple) -> ArrayTree:
+def get_node_padding_mask(padded_graph: GraphsTuple) -> ArrayTree:
     """Returns a mask for the nodes of a padded graph.
 
     Args:
@@ -808,7 +796,7 @@ def get_node_padding_mask(padded_graph: gn_graph.GraphsTuple) -> ArrayTree:
     return _get_mask(padding_length=n_padding_node, full_length=total_num_nodes)
 
 
-def get_edge_padding_mask(padded_graph: gn_graph.GraphsTuple) -> ArrayTree:
+def get_edge_padding_mask(padded_graph: GraphsTuple) -> ArrayTree:
     """Returns a mask for the edges of a padded graph.
 
     Args:
@@ -823,7 +811,7 @@ def get_edge_padding_mask(padded_graph: gn_graph.GraphsTuple) -> ArrayTree:
     return _get_mask(padding_length=n_padding_edge, full_length=total_num_edges)
 
 
-def get_graph_padding_mask(padded_graph: gn_graph.GraphsTuple) -> ArrayTree:
+def get_graph_padding_mask(padded_graph: GraphsTuple) -> ArrayTree:
     """Returns a mask for the graphs of a padded graph.
 
     Args:
@@ -844,8 +832,8 @@ def _get_mask(padding_length, full_length):
 
 
 def concatenated_args(
-    update: Optional[Callable[..., ArrayTree]] = None, *, axis: int = -1
-) -> Union[Callable[..., ArrayTree], Callable[[Callable[..., ArrayTree]], ArrayTree]]:
+    update: Callable[..., ArrayTree] | None = None, *, axis: int = -1
+) -> Callable[..., ArrayTree] | Callable[[Callable[..., ArrayTree]], ArrayTree]:
     """Decorator that concatenates arguments before being passed to an update_fn.
 
     By default node, edge and global features are passed separately to update
@@ -865,7 +853,7 @@ def concatenated_args(
         return net(features)
 
     Args:
-      update: an update function that takes ``jnp.ndarray``.
+      update: an update function that takes ``jax.Array``.
       axis: the axis upon which to concatenate.
 
     Returns:
@@ -915,10 +903,10 @@ def dtype_min_value(dtype):
 def get_fully_connected_graph(
     n_node_per_graph: int,
     n_graph: int,
-    node_features: Optional[ArrayTree] = None,
-    global_features: Optional[ArrayTree] = None,
+    node_features: ArrayTree | None = None,
+    global_features: ArrayTree | None = None,
     add_self_edges: bool = True,
-):
+) -> GraphsTuple:
     """Gets a fully connected graph given n_node_per_graph and n_graph.
 
     This method is jittable.
@@ -968,7 +956,7 @@ def get_fully_connected_graph(
         else:
             return jnp.array([], dtype=tmp_senders.dtype)
 
-    return gn_graph.GraphsTuple(
+    return GraphsTuple(
         nodes=node_features,
         edges=None,
         n_node=jnp.array([n_node_per_graph] * n_graph),
@@ -982,24 +970,24 @@ def get_fully_connected_graph(
 _NUMBER_FIELDS = ("n_node", "n_edge", "n_graph")
 
 
-def _get_graph_size(graphs_tuple):
+def _get_graph_size(graphs_tuple: GraphsTuple):
     n_node = np.sum(graphs_tuple.n_node)
     n_edge = len(graphs_tuple.senders)
     n_graph = len(graphs_tuple.n_node)
     return n_node, n_edge, n_graph
 
 
-def _is_over_batch_size(graph, graph_batch_size):
+def _is_over_batch_size(graph: GraphsTuple, graph_batch_size: int) -> bool:
     graph_size = _get_graph_size(graph)
     return any([x > y for x, y in zip(graph_size, graph_batch_size)])
 
 
 def dynamically_batch(
-    graphs_tuple_iterator: Iterator[gn_graph.GraphsTuple],
+    graphs_tuple_iterator: Iterator[GraphsTuple],
     n_node: int,
     n_edge: int,
     n_graph: int,
-) -> Generator[gn_graph.GraphsTuple, None, None]:
+) -> Generator[GraphsTuple, None, None]:
     """Dynamically batches trees with `jraph.GraphsTuples` up to specified sizes.
 
 
@@ -1087,19 +1075,19 @@ def dynamically_batch(
 
 
 def _expand_trailing_dimensions(
-    array: jnp.ndarray, template: jnp.ndarray
-) -> jnp.ndarray:
+    array: jax.Array, template: jax.Array
+) -> jax.Array:
     missing_dims = len(template.shape) - len(array.shape)
     out = jnp.reshape(array, array.shape + (1,) * missing_dims)
     assert out.dtype == array.dtype
     return out
 
 
-def _get_zero_fn(mask: jnp.ndarray) -> Callable[[jnp.ndarray], jnp.ndarray]:
+def _get_zero_fn(mask: jax.Array) -> Callable[[jax.Array], jax.Array]:
     return lambda x: _expand_trailing_dimensions(mask, x) * x
 
 
-def zero_out_padding(graph: gn_graph.GraphsTuple) -> gn_graph.GraphsTuple:
+def zero_out_padding(graph: GraphsTuple) -> GraphsTuple:
     """Zeroes out padded graphs values.
 
     Padded graphs can cause numeric overflow issues when a node has a large number
@@ -1173,8 +1161,8 @@ def zero_out_padding(graph: gn_graph.GraphsTuple) -> gn_graph.GraphsTuple:
 
 
 def with_zero_out_padding_outputs(
-    graph_net: Callable[[gn_graph.GraphsTuple], gn_graph.GraphsTuple],
-) -> Callable[[gn_graph.GraphsTuple], gn_graph.GraphsTuple]:
+    graph_net: Callable[[GraphsTuple], GraphsTuple],
+) -> Callable[[GraphsTuple], GraphsTuple]:
     """A wrapper for graph to graph functions that zeroes padded d output values.
 
     See `zero_out_padding` for a full explanation of the method.
@@ -1187,18 +1175,18 @@ def with_zero_out_padding_outputs(
     """
 
     @functools.wraps(graph_net)
-    def wrapper(graph: gn_graph.GraphsTuple) -> gn_graph.GraphsTuple:
+    def wrapper(graph: GraphsTuple) -> GraphsTuple:
         return zero_out_padding(graph_net(graph))
 
     return wrapper
 
 
 def sparse_matrix_to_graphs_tuple(
-    senders: jnp.ndarray,
-    receivers: jnp.ndarray,
-    values: jnp.ndarray,
-    n_node: jnp.ndarray,
-) -> gn_graph.GraphsTuple:
+    senders: jax.Array,
+    receivers: jax.Array,
+    values: jax.Array,
+    n_node: jax.Array,
+) -> GraphsTuple:
     """Creates a `jraph.GraphsTuple` from a sparse matrix in COO format.
 
     Args:
@@ -1215,7 +1203,7 @@ def sparse_matrix_to_graphs_tuple(
     n_edge = np.array([np.sum(values)])
     senders = np.repeat(senders, values)
     receivers = np.repeat(receivers, values)
-    return gn_graph.GraphsTuple(
+    return GraphsTuple(
         nodes=None,
         edges=None,
         receivers=receivers,
