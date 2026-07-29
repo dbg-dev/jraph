@@ -22,61 +22,23 @@ import jax.numpy as jnp
 import jax.tree_util as tree
 from . import graph as gn_graph
 from . import utils
-
-# As of 04/2020 pytype doesn't support recursive types.
-# pytype: disable=not-supported-yet
-ArrayTree = Union[jnp.ndarray, Iterable['ArrayTree'], Mapping[Any, 'ArrayTree']]
-
-# All features will be an ArrayTree.
-NodeFeatures = EdgeFeatures = SenderFeatures = ReceiverFeatures = Globals = ArrayTree
-
-# Signature:
-# (edges of each node to be aggregated, segment ids, number of segments) ->
-# aggregated edges
-AggregateEdgesToNodesFn = Callable[
-    [EdgeFeatures, jnp.ndarray, int], NodeFeatures]
-
-# Signature:
-# (nodes of each graph to be aggregated, segment ids, number of segments) ->
-# aggregated nodes
-AggregateNodesToGlobalsFn = Callable[[NodeFeatures, jnp.ndarray, int],
-                                     Globals]
-
-# Signature:
-# (edges of each graph to be aggregated, segment ids, number of segments) ->
-# aggregated edges
-AggregateEdgesToGlobalsFn = Callable[[EdgeFeatures, jnp.ndarray, int],
-                                     Globals]
-
-# Signature:
-# (edge features, sender node features, receiver node features, globals) ->
-# attention weights
-AttentionLogitFn = Callable[
-    [EdgeFeatures, SenderFeatures, ReceiverFeatures, Globals], ArrayTree]
-
-# Signature:
-# (edge features, weights) -> edge features for node update
-AttentionReduceFn = Callable[[EdgeFeatures, ArrayTree], EdgeFeatures]
-
-# Signature:
-# (edges to be normalized, segment ids, number of segments) ->
-# normalized edges
-AttentionNormalizeFn = Callable[[EdgeFeatures, jnp.ndarray, int], EdgeFeatures]
-
-# Signature:
-# (edge features, sender node features, receiver node features, globals) ->
-# updated edge features
-GNUpdateEdgeFn = Callable[
-    [EdgeFeatures, SenderFeatures, ReceiverFeatures, Globals], EdgeFeatures]
-
-# Signature:
-# (node features, outgoing edge features, incoming edge features,
-#  globals) -> updated node features
-GNUpdateNodeFn = Callable[
-    [NodeFeatures, SenderFeatures, ReceiverFeatures, Globals], NodeFeatures]
-
-GNUpdateGlobalFn = Callable[[NodeFeatures, EdgeFeatures, Globals], Globals]
-
+from jraph._types import (
+  ArrayTree,
+  NodeFeatures,
+  EdgeFeatures,
+  SenderFeatures,
+  ReceiverFeatures,
+  Globals,
+  AggregateEdgesToNodesFn,
+  AggregateNodesToGlobalsFn,
+  AggregateEdgesToGlobalsFn,
+  AttentionLogitFn,
+  AttentionReduceFn,
+  AttentionNormalizeFn,
+  GNUpdateEdgeFn,
+  GNUpdateGlobalFn,
+  GNUpdateNodeFn
+)
 
 def GraphNetwork(
     update_edge_fn: Optional[GNUpdateEdgeFn],

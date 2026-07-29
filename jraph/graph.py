@@ -16,12 +16,7 @@
 
 from typing import Any, NamedTuple, Iterable, Mapping, Union, Optional
 import jax.numpy as jnp
-
-
-# As of 04/2020 pytype doesn't support recursive types.
-# pytype: disable=not-supported-yet
-ArrayTree = Union[jnp.ndarray, Iterable['ArrayTree'], Mapping[Any, 'ArrayTree']]
-
+from jraph._types import ArrayTree
 
 class GraphsTuple(NamedTuple):
   """An ordered collection of graphs in a sparse format.

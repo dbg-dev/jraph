@@ -33,10 +33,7 @@ import jax.numpy as jnp
 import jax.tree_util as tree
 from . import graph as gn_graph
 import numpy as np
-
-# As of 04/2020 pytype doesn't support recursive types.
-# pytype: disable=not-supported-yet
-ArrayTree = Union[jnp.ndarray, Iterable["ArrayTree"], Mapping[Any, "ArrayTree"]]
+from jraph._types import ArrayTree
 
 
 def segment_sum(
