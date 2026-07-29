@@ -63,6 +63,7 @@ dev = [
 ]
 test = [
     "absl-py>=2.5.0",
+    "basedpyright>=1.39.9",
     "dm-haiku>=0.0.17",
     "dm-tree>=0.1.10",
     "flax>=0.12.8",
@@ -93,3 +94,8 @@ addopts = [
     "--strict-config",
     "--strict-markers",
 ]
+
+[tool.basedpyright]
+pythonVersion = "3.14"
+include = ["jraph", "tests"]
+typeCheckingMode = "recommended"

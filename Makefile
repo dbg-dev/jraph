@@ -1,6 +1,8 @@
 UV := uv
 
 .PHONY: help sync upgrade test lint format format-check build clean distclean check
+.PHONY: typecheck
+
 
 help:
 	@printf '%s\n' \
@@ -28,6 +30,9 @@ test:
 lint:
 	$(UV) run --group test ruff check .
 
+typecheck:
+	$(UV) run --group test basedpyright
+
 format:
 	$(UV) run --group test ruff check --fix .
 	$(UV) run --group test ruff format .
@@ -46,4 +51,4 @@ clean:
 distclean: clean
 	rm -rf .venv
 
-check: format-check lint test build
+check: format-check lint typecheck test build
