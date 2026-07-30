@@ -14,6 +14,10 @@
 
 """Shared training utilities for the OGB examples."""
 
+from collections.abc import Mapping
+from typing import cast
+
+import jax
 import jax.numpy as jnp
 
 import jraph
@@ -62,3 +66,16 @@ def pad_graph_to_nearest_power_of_two(
         pad_edges_to,
         pad_graphs_to,
     )
+
+
+def prepare_graph(
+    graph: jraph.GraphsTuple,
+) -> tuple[jraph.GraphsTuple, jax.Array]:
+    """Pad a graph batch, extract its labels, and clear its globals."""
+
+    graph = pad_graph_to_nearest_power_of_two(graph)
+
+    graph_globals = cast(Mapping[str, jax.Array], graph.globals)
+    labels = graph_globals["label"]
+
+    return graph._replace(globals={}), labels

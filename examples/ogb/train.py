@@ -52,7 +52,7 @@ import jax
 import jax.numpy as jnp
 import jraph
 from examples.ogb import data_utils
-from examples.ogb._training import pad_graph_to_nearest_power_of_two
+from examples.ogb._training import pad_graph_to_nearest_power_of_two, prepare_graph
 import optax
 
 
@@ -163,11 +163,7 @@ def train(
         # will result in *extremely* slow training. To prevent this, pad each
         # batch of graphs to the nearest power of two. Since jax maintains a cache
         # of compiled programs, the compilation cost is amortized.
-        graph = pad_graph_to_nearest_power_of_two(graph)
-
-        # Extract the label from the graph.
-        label = graph.globals["label"]
-        graph = graph._replace(globals={})
+        graph, label = prepare_graph(next(reader))
 
         (loss, acc), grad = compute_loss_fn(params, graph, label)
         updates, opt_state = opt_update(grad, opt_state, params)
@@ -211,11 +207,8 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
         # will result in *extremely* slow training. To prevent this, pad each
         # batch of graphs to the nearest power of two. Since jax maintains a cache
         # of compiled programs, the compilation cost is amortized.
-        graph = pad_graph_to_nearest_power_of_two(graph)
+        graph, label = prepare_graph(graph)
 
-        # Extract the labels and remove from the graph.
-        label = graph.globals["label"]
-        graph = graph._replace(globals={})
         loss, acc = compute_loss_fn(params, graph, label)
         accumulated_accuracy += acc
         accumulated_loss += loss
