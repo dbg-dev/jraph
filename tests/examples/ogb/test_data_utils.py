@@ -18,7 +18,7 @@ import pathlib
 from absl.testing import absltest
 from absl.testing import parameterized
 import jraph
-from jraph.ogb_examples import data_utils
+from examples.ogb import data_utils
 import numpy as np
 import tree
 

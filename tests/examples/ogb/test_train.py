@@ -12,32 +12,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for jraph.ogb_examples.train_flax."""
+"""Tests for jraph.ogb_examples.train."""
 
-import pytest
 import pathlib
 from absl.testing import absltest
 
-
+import pytest
 pytest.skip(
     "Legacy Flax example depends on the removed flax.optim API; "
     "restore this test when the example is migrated to NNX and Optax.",
     allow_module_level=True,
 )
 
-from jraph.ogb_examples import train_flax
+from examples.ogb import train
 
 
 class TrainTest(absltest.TestCase):
 
   def test_train_and_eval_overfit(self):
-    ogb_path = pathlib.Path(train_flax.__file__).parents[0]
+    ogb_path = pathlib.Path(train.__file__).parents[0]
     master_csv_path = pathlib.Path(ogb_path, 'test_data', 'master.csv')
     split_path = pathlib.Path(ogb_path, 'test_data', 'train.csv.gz')
     data_path = master_csv_path.parents[0]
     temp_dir = self.create_tempdir().full_path
-    train_flax.train(data_path, master_csv_path, split_path, 1, 101, temp_dir)
-    _, accuracy = train_flax.evaluate(
+    train.train(data_path, master_csv_path, split_path, 1, 101, temp_dir)
+    _, accuracy = train.evaluate(
         data_path, master_csv_path, split_path, temp_dir)
     self.assertEqual(accuracy, 1.0)
 

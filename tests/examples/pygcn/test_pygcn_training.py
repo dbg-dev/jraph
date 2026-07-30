@@ -18,13 +18,14 @@ from examples.pygcn.training import (
 
 
 DATA_PATH = (
-    Path(__file__).parents[2]
+    Path(__file__).parents[3]
     / "examples"
     / "pygcn"
     / "data"
     / "cora"
 )
 
+print(DATA_PATH)
 
 def make_model() -> TwoLayerGCN:
     return TwoLayerGCN(

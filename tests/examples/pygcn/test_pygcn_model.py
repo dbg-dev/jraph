@@ -9,13 +9,7 @@ from examples.pygcn.cora import load_cora
 from examples.pygcn.model import TwoLayerGCN
 
 
-DATA_PATH = (
-    Path(__file__).parents[2]
-    / "examples"
-    / "pygcn"
-    / "data"
-    / "cora"
-)
+DATA_PATH = Path(__file__).parents[3] / "examples" / "pygcn" / "data" / "cora"
 
 
 def test_two_layer_gcn_produces_node_logits() -> None:

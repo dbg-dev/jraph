@@ -24,7 +24,7 @@ pytest.skip(
 )
 
 from pathlib import Path
-from jraph.ogb_examples import train_pmap
+from examples.ogb import train_pmap
 
 
 def test_train_and_eval_overfit(tmp_path: Path) -> None:
