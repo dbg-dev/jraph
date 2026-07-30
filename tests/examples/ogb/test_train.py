@@ -12,24 +12,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for jraph.ogb_examples.train."""
+"""Tests for examples.ogb.train."""
 
-import pathlib
-from absl.testing import absltest
+from pathlib import Path
+
 from examples.ogb import train
 
 
-class TrainTest(absltest.TestCase):
-    def test_train_and_eval_overfit(self):
-        ogb_path = pathlib.Path(__file__).parents[0]
-        master_csv_path = pathlib.Path(ogb_path, "test_data", "master.csv")
-        split_path = pathlib.Path(ogb_path, "test_data", "train.csv.gz")
-        data_path = master_csv_path.parents[0]
-        temp_dir = self.create_tempdir().full_path
-        train.train(data_path, master_csv_path, split_path, 1, 101, temp_dir)
-        _, accuracy = train.evaluate(data_path, master_csv_path, split_path, temp_dir)
-        self.assertEqual(accuracy, 1.0)
+def test_train_and_eval_overfit(tmp_path: Path) -> None:
+    test_data = Path(__file__).parent / "test_data"
+    master_csv_path = test_data / "master.csv"
+    split_path = test_data / "train.csv.gz"
 
+    train.train(
+        test_data,
+        master_csv_path,
+        split_path,
+        1,
+        101,
+        tmp_path,
+    )
 
-if __name__ == "__main__":
-    absltest.main()
+    _, accuracy = train.evaluate(
+        test_data,
+        master_csv_path,
+        split_path,
+        tmp_path,
+    )
+
+    assert float(accuracy) == 1.0

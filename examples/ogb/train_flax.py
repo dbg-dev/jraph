@@ -60,14 +60,27 @@ from examples.ogb._training import (
     run_training,
 )
 
-flags.DEFINE_string("data_path", None, "Directory of the data.")
-flags.DEFINE_string("split_path", None, "Path to the data split indices.")
-flags.DEFINE_string("master_csv_path", None, "Path to OGB master.csv.")
-flags.DEFINE_string("save_dir", None, "Directory to save parameters to.")
-flags.DEFINE_integer("batch_size", 1, "Number of graphs in batch.")
-flags.DEFINE_integer("num_training_steps", 1000, "Number of training steps.")
-flags.DEFINE_enum("mode", "train", ["train", "evaluate"], "Train or evaluate.")
 FLAGS = flags.FLAGS
+
+
+def _define_flags() -> None:
+  flags.DEFINE_string("data_path", None, "Directory of the data.")
+  flags.DEFINE_string("split_path", None, "Path to the data split indices.")
+  flags.DEFINE_string("master_csv_path", None, "Path to OGB master.csv.")
+  flags.DEFINE_string("save_dir", None, "Directory to save parameters to.")
+  flags.DEFINE_integer("batch_size", 1, "Number of graphs in batch.")
+  flags.DEFINE_integer(
+      "num_training_steps",
+      1000,
+      "Number of training steps.",
+  )
+  flags.DEFINE_enum(
+      "mode",
+      "train",
+      ["train", "evaluate"],
+      "Train or evaluate.",
+  )
+
 
 
 class ExplicitMLP(nn.Module):
@@ -276,4 +289,5 @@ def main(_):
 
 
 if __name__ == "__main__":
+    _define_flags()
     app.run(main)
