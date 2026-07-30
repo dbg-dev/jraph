@@ -52,7 +52,12 @@ import jax
 import jax.numpy as jnp
 import jraph
 from examples.ogb import data_utils
-from examples.ogb._training import loss_and_accuracy, prepare_graph
+from examples.ogb._training import (
+    loss_and_accuracy,
+    prepare_graph,
+    StepMetrics,
+    run_training,
+)
 import optax
 
 
@@ -140,24 +145,40 @@ def train(
     # found in the jax documentation.
     compute_loss_fn = jax.jit(jax.value_and_grad(compute_loss_fn, has_aux=True))
 
-    for idx in range(num_training_steps):
-        graph = next(reader)
-        # Jax will re-jit your graphnet every time a new graph shape is encountered.
-        # In the limit, this means a new compilation every training step, which
-        # will result in *extremely* slow training. To prevent this, pad each
-        # batch of graphs to the nearest power of two. Since jax maintains a cache
-        # of compiled programs, the compilation cost is amortized.
-        graph, label = prepare_graph(next(reader))
+    def train_step(
+        state,
+        graph: jraph.GraphsTuple,
+        labels: jax.Array,
+    ) -> tuple[object, StepMetrics]:
+        params, opt_state = state
 
-        (loss, acc), grad = compute_loss_fn(params, graph, label)
-        updates, opt_state = opt_update(grad, opt_state, params)
+        (metrics, gradients) = compute_loss_fn(
+            params,
+            graph,
+            labels,
+        )
+
+        updates, opt_state = opt_update(
+            gradients,
+            opt_state,
+            params,
+        )
         params = optax.apply_updates(params, updates)
-        if idx % 100 == 0:
-            logging.info("step: %s, loss: %s, acc: %s", idx, loss, acc)
+
+        return (params, opt_state), metrics
+
+    params, _ = run_training(
+        reader,
+        (params, opt_state),
+        train_step,
+        num_training_steps=num_training_steps,
+    )
+
     if save_dir is not None:
         with pathlib.Path(save_dir, "molhiv.pkl").open("wb") as fp:
             logging.info("Saving model to %s", save_dir)
             pickle.dump(params, fp)
+
     logging.info("Training finished")
 
 

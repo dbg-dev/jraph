@@ -14,13 +14,15 @@
 
 """Shared training utilities for the OGB examples."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Callable, Iterator
 from typing import cast
 
 import jax
 import jax.numpy as jnp
 
 import jraph
+import logging
+from typing import TypeVar
 
 
 def _nearest_bigger_power_of_two(x: int) -> int:
@@ -99,3 +101,35 @@ def loss_and_accuracy(
     accuracy = jnp.sum((jnp.argmax(logits, axis=1) == labels) * mask) / jnp.sum(mask)
 
     return loss, accuracy
+
+
+StateT = TypeVar("StateT")
+
+type StepMetrics = tuple[jax.Array, jax.Array]
+
+
+def run_training(
+    reader: Iterator[jraph.GraphsTuple],
+    state: StateT,
+    train_step: Callable[
+        [StateT, jraph.GraphsTuple, jax.Array],
+        tuple[StateT, StepMetrics],
+    ],
+    *,
+    num_training_steps: int,
+) -> StateT:
+    """Run a single-device graph training loop."""
+
+    for step in range(num_training_steps):
+        graph, labels = prepare_graph(next(reader))
+        state, (loss, accuracy) = train_step(state, graph, labels)
+
+        if step % 100 == 0:
+            logging.info(
+                "step: %s, loss: %s, acc: %s",
+                step,
+                loss,
+                accuracy,
+            )
+
+    return state
