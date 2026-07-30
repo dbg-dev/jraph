@@ -14,7 +14,7 @@
 
 """Shared training utilities for the OGB examples."""
 
-from collections.abc import Mapping, Callable, Iterator
+from collections.abc import Mapping, Callable, Iterator, Iterable
 from typing import cast
 
 import jax
@@ -133,3 +133,37 @@ def run_training(
             )
 
     return state
+
+
+def run_evaluation(
+    reader: Iterable[jraph.GraphsTuple],
+    state: StateT,
+    eval_step: Callable[
+        [StateT, jraph.GraphsTuple, jax.Array],
+        StepMetrics,
+    ],
+) -> StepMetrics:
+    """Run a single-device graph evaluation loop."""
+
+    accumulated_loss = jnp.asarray(0.0)
+    accumulated_accuracy = jnp.asarray(0.0)
+    num_batches = 0
+
+    for graph in reader:
+        graph, labels = prepare_graph(graph)
+        loss, accuracy = eval_step(state, graph, labels)
+
+        accumulated_loss += loss
+        accumulated_accuracy += accuracy
+        num_batches += 1
+
+        if num_batches % 100 == 0:
+            logging.info("Evaluated %s graph batches", num_batches)
+
+    if num_batches == 0:
+        raise ValueError("Cannot evaluate an empty dataset.")
+
+    return (
+        accumulated_loss / num_batches,
+        accumulated_accuracy / num_batches,
+    )

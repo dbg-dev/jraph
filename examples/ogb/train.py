@@ -57,6 +57,7 @@ from examples.ogb._training import (
     prepare_graph,
     StepMetrics,
     run_training,
+    run_evaluation,
 )
 import optax
 
@@ -206,23 +207,17 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
     # to use more than 1 accelerator, use jax.pmap. More information can be
     # found in the jax documentation.
     compute_loss_fn = jax.jit(functools.partial(compute_loss, net=net))
-    for graph in reader:
-        # Jax will re-jit your graphnet every time a new graph shape is encountered.
-        # In the limit, this means a new compilation every training step, which
-        # will result in *extremely* slow training. To prevent this, pad each
-        # batch of graphs to the nearest power of two. Since jax maintains a cache
-        # of compiled programs, the compilation cost is amortized.
-        graph, label = prepare_graph(graph)
 
-        loss, acc = compute_loss_fn(params, graph, label)
-        accumulated_accuracy += acc
-        accumulated_loss += loss
-        idx += 1
-        if idx % 100 == 0:
-            logging.info("Evaluated %s graphs", idx)
+    def eval_step(params, graph, labels):
+        return compute_loss_fn(params, graph, labels)
+
+    loss, accuracy = run_evaluation(
+        reader,
+        params,
+        eval_step,
+    )
+
     logging.info("Completed evaluation.")
-    loss = accumulated_loss / idx
-    accuracy = accumulated_accuracy / idx
     logging.info("Eval loss: %s, accuracy %s", loss, accuracy)
     return loss, accuracy
 
