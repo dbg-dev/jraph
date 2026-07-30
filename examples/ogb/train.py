@@ -52,7 +52,7 @@ import jax
 import jax.numpy as jnp
 import jraph
 from examples.ogb import data_utils
-from examples.ogb._training import pad_graph_to_nearest_power_of_two, prepare_graph
+from examples.ogb._training import loss_and_accuracy, prepare_graph
 import optax
 
 
@@ -103,24 +103,8 @@ def net_fn(graph: jraph.GraphsTuple) -> jraph.GraphsTuple:
 
 def compute_loss(params, graph, label, net):
     """Computes loss."""
-    pred_graph = net.apply(params, graph)
-    preds = jax.nn.log_softmax(pred_graph.globals)
-    targets = jax.nn.one_hot(label, 2)
-
-    # Since we have an extra 'dummy' graph in our batch due to padding, we want
-    # to mask out any loss associated with the dummy graph.
-    # Since we padded with `pad_with_graphs` we can recover the mask by using
-    # get_graph_padding_mask.
-    mask = jraph.get_graph_padding_mask(pred_graph)
-
-    # Cross entropy loss.
-    loss = -jnp.mean(preds * targets * mask[:, None])
-
-    # Accuracy taking into account the mask.
-    accuracy = jnp.sum(
-        (jnp.argmax(pred_graph.globals, axis=1) == label) * mask
-    ) / jnp.sum(mask)
-    return loss, accuracy
+    predicted_graph = net.apply(params, graph)
+    return loss_and_accuracy(predicted_graph, label)
 
 
 def train(

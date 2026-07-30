@@ -79,3 +79,23 @@ def prepare_graph(
     labels = graph_globals["label"]
 
     return graph._replace(globals={}), labels
+
+
+def loss_and_accuracy(
+    predicted_graph: jraph.GraphsTuple,
+    labels: jax.Array,
+) -> tuple[jax.Array, jax.Array]:
+    """Compute masked graph-classification loss and accuracy."""
+
+    logits = cast(jax.Array, predicted_graph.globals)
+    log_probabilities = jax.nn.log_softmax(logits)
+    targets = jax.nn.one_hot(labels, 2)
+
+    # Ignore the dummy graph added by pad_with_graphs.
+    mask = jraph.get_graph_padding_mask(predicted_graph)
+
+    loss = -jnp.mean(log_probabilities * targets * mask[:, None])
+
+    accuracy = jnp.sum((jnp.argmax(logits, axis=1) == labels) * mask) / jnp.sum(mask)
+
+    return loss, accuracy
