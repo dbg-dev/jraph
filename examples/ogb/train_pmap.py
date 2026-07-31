@@ -45,27 +45,32 @@ import functools
 import logging
 import pathlib
 import pickle
+from collections.abc import Iterable, Iterator
+
 from absl import app
 from absl import flags
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import jraph
-from examples.ogb import data_utils
-import optax
-from collections.abc import Iterable, Iterator
 import numpy as np
+import optax
 
+from examples.ogb import data_utils
 from examples.ogb._training import loss_and_accuracy
 
-flags.DEFINE_string("data_path", None, "Directory of the data.")
-flags.DEFINE_string("split_path", None, "Path to the data split indices.")
-flags.DEFINE_string("master_csv_path", None, "Path to OGB master.csv.")
-flags.DEFINE_string("save_dir", None, "Directory to save parameters to.")
-flags.DEFINE_integer("batch_size", 1, "Number of graphs in batch.")
-flags.DEFINE_integer("num_training_steps", 1000, "Number of training steps.")
-flags.DEFINE_enum("mode", "train", ["train", "evaluate"], "Train or evaluate.")
+
 FLAGS = flags.FLAGS
+
+
+def _define_flags() -> None:
+    flags.DEFINE_string("data_path", None, "Directory of the data.")
+    flags.DEFINE_string("split_path", None, "Path to the data split indices.")
+    flags.DEFINE_string("master_csv_path", None, "Path to OGB master.csv.")
+    flags.DEFINE_string("save_dir", None, "Directory to save parameters to.")
+    flags.DEFINE_integer("batch_size", 1, "Number of graphs in batch.")
+    flags.DEFINE_integer("num_training_steps", 1000, "Number of training steps.")
+    flags.DEFINE_enum("mode", "train", ["train", "evaluate"], "Train or evaluate.")
 
 
 @jraph.concatenated_args
@@ -109,8 +114,10 @@ def device_batch(
     num_devices: int | None = None,
 ) -> Iterator[jraph.GraphsTuple]:
     """Stack graph batches along a leading device axis."""
+    batch_size = jax.local_device_count() if num_devices is None else num_devices
 
-    batch_size = num_devices or jax.local_device_count()
+    if batch_size < 1:
+        raise ValueError(f"num_devices must be positive, got {batch_size}")
     batch = []
 
     for graph in graphs:
@@ -204,7 +211,9 @@ def train(
 
     for step in range(num_training_steps):
         graph_batch = next(graph_batches)
+
         labels = graph_batch.globals["label"]
+        graph_batch = graph_batch._replace(globals={})
 
         loss, accuracy, opt_state, params = update_fn(
             params,
@@ -260,6 +269,7 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
 
     for graph_batch in device_batch(reader):
         labels = graph_batch.globals["label"]
+        graph_batch = graph_batch._replace(globals={})
 
         batch_loss, batch_accuracy = compute_loss_fn(
             params,
@@ -317,4 +327,5 @@ def main(_):
 
 
 if __name__ == "__main__":
+    _define_flags()
     app.run(main)

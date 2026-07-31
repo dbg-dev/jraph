@@ -14,12 +14,13 @@
 # limitations under the License.
 """Tests for jraph.ogb_examples.train_pmap."""
 
-import pytest
+import jax
 from pathlib import Path
 from examples.ogb import train_pmap
 
 
 def test_train_and_eval_overfit(tmp_path: Path) -> None:
+    assert jax.local_device_count() >= 2
     test_dir = Path(__file__).parent
     test_data = test_dir / "test_data"
 
