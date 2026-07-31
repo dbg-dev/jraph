@@ -15,14 +15,6 @@
 """Tests for jraph.ogb_examples.train_pmap."""
 
 import pytest
-
-pytest.skip(
-    "Legacy OGB pmap example requires an obsolete JAX/Flax stack, including "
-    "the removed jax.device_put_replicated API. Re-enable when the example "
-    "is migrated to current JAX and Flax NNX.",
-    allow_module_level=True,
-)
-
 from pathlib import Path
 from examples.ogb import train_pmap
 
