@@ -21,9 +21,9 @@ from examples.ogb import train_pmap
 
 def test_train_and_eval_overfit(tmp_path: Path) -> None:
     assert jax.local_device_count() >= 2
+
     test_dir = Path(__file__).parent
     test_data = test_dir / "test_data"
-
     master_csv_path = test_data / "master.csv"
     split_path = test_data / "train.csv.gz"
 
@@ -33,7 +33,7 @@ def test_train_and_eval_overfit(tmp_path: Path) -> None:
         split_path,
         1,
         101,
-        str(tmp_path),
+        tmp_path,
     )
 
     _, accuracy = train_pmap.evaluate(

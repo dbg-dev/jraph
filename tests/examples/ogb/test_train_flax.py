@@ -20,7 +20,10 @@ from examples.ogb import train_flax
 
 
 def test_train_and_eval_overfit(tmp_path: Path) -> None:
-    data_path = Path(__file__).parent / "test_data"
+
+
+    test_dir = Path(__file__).parent
+    data_path = test_dir / "test_data"
     master_csv_path = data_path / "master.csv"
     split_path = data_path / "train.csv.gz"
 

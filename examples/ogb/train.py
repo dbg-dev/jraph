@@ -50,11 +50,15 @@ from absl import flags
 import haiku as hk
 import jax
 import jax.numpy as jnp
-import jraph
+from jraph import (
+    GraphNetwork,
+    GraphsTuple,
+    GraphMapFeatures,
+    concatenated_args
+)
 from examples.ogb import data_utils
 from examples.ogb._training import (
     loss_and_accuracy,
-    prepare_graph,
     StepMetrics,
     run_training,
     run_evaluation,
@@ -83,21 +87,21 @@ def _define_flags() -> None:
   )
 
 
-@jraph.concatenated_args
+@concatenated_args
 def edge_update_fn(feats: jnp.ndarray) -> jnp.ndarray:
     """Edge update function for graph net."""
     net = hk.Sequential([hk.Linear(128), jax.nn.relu, hk.Linear(128)])
     return net(feats)
 
 
-@jraph.concatenated_args
+@concatenated_args
 def node_update_fn(feats: jnp.ndarray) -> jnp.ndarray:
     """Node update function for graph net."""
     net = hk.Sequential([hk.Linear(128), jax.nn.relu, hk.Linear(128)])
     return net(feats)
 
 
-@jraph.concatenated_args
+@concatenated_args
 def update_global_fn(feats: jnp.ndarray) -> jnp.ndarray:
     """Global update function for graph net."""
     # Molhiv is a binary classification task, so output pos neg logits.
@@ -105,12 +109,12 @@ def update_global_fn(feats: jnp.ndarray) -> jnp.ndarray:
     return net(feats)
 
 
-def net_fn(graph: jraph.GraphsTuple) -> jraph.GraphsTuple:
+def net_fn(graph: GraphsTuple) -> GraphsTuple:
     """Graph net function."""
     # Add a global paramater for graph classification.
     graph = graph._replace(globals=jnp.zeros([graph.n_node.shape[0], 1]))
-    embedder = jraph.GraphMapFeatures(hk.Linear(128), hk.Linear(128), hk.Linear(128))
-    net = jraph.GraphNetwork(
+    embedder = GraphMapFeatures(hk.Linear(128), hk.Linear(128), hk.Linear(128))
+    net = GraphNetwork(
         update_node_fn=node_update_fn,
         update_edge_fn=edge_update_fn,
         update_global_fn=update_global_fn,
@@ -159,7 +163,7 @@ def train(
 
     def train_step(
         state,
-        graph: jraph.GraphsTuple,
+        graph: GraphsTuple,
         labels: jax.Array,
     ) -> tuple[object, StepMetrics]:
         params, opt_state = state
@@ -209,6 +213,7 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
     net = hk.without_apply_rng(hk.transform(net_fn))
     with pathlib.Path(save_dir, "molhiv.pkl").open("rb") as fp:
         params = pickle.load(fp)
+    
     accumulated_loss = 0
     accumulated_accuracy = 0
     idx = 0
@@ -219,7 +224,7 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
     # found in the jax documentation.
     compute_loss_fn = jax.jit(functools.partial(compute_loss, net=net))
 
-    def eval_step(params, graph, labels):
+    def eval_step(params, graph: GraphsTuple, labels):
         return compute_loss_fn(params, graph, labels)
 
     loss, accuracy = run_evaluation(

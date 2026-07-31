@@ -14,19 +14,20 @@
 # limitations under the License.
 """Tests for jraph.models."""
 
+from typing import Any
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
 
-from jraph import graph
+from jraph.graph import GraphsTuple
 from jraph import models
 from jraph import utils
 import numpy as np
 
 
-def _get_random_graph(max_n_graph=10):
+def _get_random_graph(max_n_graph: int = 10) -> GraphsTuple:
   n_graph = np.random.randint(1, max_n_graph + 1)
   n_node = np.random.randint(0, 10, n_graph)
   n_edge = np.random.randint(0, 20, n_graph)
@@ -44,7 +45,7 @@ def _get_random_graph(max_n_graph=10):
           np.random.randint(0, n_node_in_graph, n_edge_in_graph) + offset)
     offset += n_node_in_graph
 
-  return graph.GraphsTuple(
+  return GraphsTuple(
       n_node=jnp.asarray(n_node),
       n_edge=jnp.asarray(n_edge),
       nodes=jnp.asarray(np.random.random(size=(np.sum(n_node), 4))),
@@ -54,7 +55,7 @@ def _get_random_graph(max_n_graph=10):
       receivers=jnp.asarray(receivers))
 
 
-def _get_graph_network(graphs_tuple):
+def _get_graph_network(graphs_tuple: GraphsTuple) -> GraphsTuple:
   # Our test update functions are just identity functions.
   update_node_fn = lambda n, se, re, g: n
   update_edge_fn = lambda e, sn, rn, g: e
@@ -65,7 +66,7 @@ def _get_graph_network(graphs_tuple):
   return net(graphs_tuple)
 
 
-def _get_graph_network_no_global_update(graphs_tuple):
+def _get_graph_network_no_global_update(graphs_tuple: GraphsTuple) -> GraphsTuple:
   # Our test update functions are just identity functions.
   update_node_fn = lambda n, se, re, g: n
   update_edge_fn = lambda e, sn, rn, g: e
@@ -76,7 +77,7 @@ def _get_graph_network_no_global_update(graphs_tuple):
   return net(graphs_tuple)
 
 
-def _get_graph_network_no_node_update(graphs_tuple):
+def _get_graph_network_no_node_update(graphs_tuple: GraphsTuple) -> GraphsTuple:
   # Our test update functions are just identity functions.
   update_node_fn = None
   update_edge_fn = lambda e, sn, rn, g: e
@@ -87,7 +88,7 @@ def _get_graph_network_no_node_update(graphs_tuple):
   return net(graphs_tuple)
 
 
-def _get_graph_network_no_edge_update(graphs_tuple):
+def _get_graph_network_no_edge_update(graphs_tuple: GraphsTuple) -> GraphsTuple:
   # Our test update functions are just identity functions.
   update_node_fn = lambda n, se, re, g: n
   update_edge_fn = None
@@ -98,7 +99,7 @@ def _get_graph_network_no_edge_update(graphs_tuple):
   return net(graphs_tuple)
 
 
-def _get_attention_graph_network(graphs_tuple):
+def _get_attention_graph_network(graphs_tuple: GraphsTuple) -> GraphsTuple:
   # Our test update functions are just identity functions.
   update_node_fn = lambda n, se, re, g: n
   update_edge_fn = lambda e, sn, rn, g: e
@@ -115,7 +116,7 @@ def _get_attention_graph_network(graphs_tuple):
   return net(graphs_tuple)
 
 
-def _get_graph_gat(graphs_tuple):
+def _get_graph_gat(graphs_tuple: GraphsTuple) -> GraphsTuple:
   # Our test update functions are just identity functions.
   update_node_fn = lambda n, se, re, g: n
   update_edge_fn = lambda e, sn, rn, g: e
@@ -132,7 +133,7 @@ def _get_graph_gat(graphs_tuple):
   return net(graphs_tuple)
 
 
-def _get_multi_head_attention_graph_network(graphs_tuple):
+def _get_multi_head_attention_graph_network(graphs_tuple: GraphsTuple) -> GraphsTuple:
   # Our test update functions are just identity functions.
   update_node_fn = lambda n, se, re, g: n
   update_global_fn = lambda gn, ge, g: g
@@ -155,7 +156,7 @@ def _get_multi_head_attention_graph_network(graphs_tuple):
   return net(graphs_tuple)
 
 
-def _get_interaction_network(graphs_tuple):
+def _get_interaction_network(graphs_tuple: GraphsTuple) -> tuple[GraphsTuple, GraphsTuple]:
   update_node_fn = lambda n, r: jnp.concatenate((n, r), axis=-1)
   update_edge_fn = lambda e, s, r: jnp.concatenate((e, s, r), axis=-1)
   out = models.InteractionNetwork(update_edge_fn, update_node_fn)(graphs_tuple)
@@ -171,7 +172,7 @@ def _get_interaction_network(graphs_tuple):
   return out, expected_out
 
 
-def _get_graph_independent(graphs_tuple):
+def _get_graph_independent(graphs_tuple: GraphsTuple) -> tuple[GraphsTuple, GraphsTuple]:
   embed_fn = lambda x: x * 2
   out = models.GraphMapFeatures(embed_fn, embed_fn, embed_fn)(graphs_tuple)
   expected_out = graphs_tuple._replace(nodes=graphs_tuple.nodes*2,
@@ -180,7 +181,7 @@ def _get_graph_independent(graphs_tuple):
   return out, expected_out
 
 
-def _get_relation_network(graphs_tuple):
+def _get_relation_network(graphs_tuple: GraphsTuple) -> tuple[GraphsTuple, GraphsTuple]:
   edge_fn = lambda s, r: jnp.concatenate((s, r), axis=-1)
   global_fn = lambda e: e*2
   out = models.RelationNetwork(edge_fn, global_fn)(graphs_tuple)
@@ -198,7 +199,7 @@ def _get_relation_network(graphs_tuple):
   return out, expected_out
 
 
-def _get_deep_sets(graphs_tuple):
+def _get_deep_sets(graphs_tuple: GraphsTuple) -> tuple[GraphsTuple, GraphsTuple]:
   node_fn = lambda n, g: jnp.concatenate((n, g), axis=-1)
   global_fn = lambda n: n*2
   out = models.DeepSets(node_fn, global_fn)(graphs_tuple)
@@ -218,7 +219,7 @@ def _get_deep_sets(graphs_tuple):
   return out, expected_out
 
 
-def _get_gat(graphs_tuple):
+def _get_gat(graphs_tuple: GraphsTuple) -> tuple[GraphsTuple, GraphsTuple]:
   # With multi-head attention we have to return multiple edge features.
   # Here we define 3 heads, all with the same message.
   def attention_query_fn(n):
@@ -242,12 +243,12 @@ def _get_gat(graphs_tuple):
 
 class ModelsTest(parameterized.TestCase):
 
-  def _make_nest(self, array):
+  def _make_nest(self, array) -> dict[str, Any | list[jax.Array | dict[str, jax.Array]]]:
     """Returns a nest given an array."""
     return {'a': array,
             'b': [jnp.ones_like(array), {'c': jnp.zeros_like(array)}]}
 
-  def _get_list_and_batched_graph(self):
+  def _get_list_and_batched_graph(self) -> tuple[list[GraphsTuple], GraphsTuple]:
     """Returns a list of individual graphs and a batched version.
 
     This test-case includes the following corner-cases:
@@ -257,7 +258,7 @@ class ModelsTest(parameterized.TestCase):
       - single edge,
       - and multiple edges.
     """
-    batched_graph = graph.GraphsTuple(
+    batched_graph = GraphsTuple(
         n_node=jnp.array([1, 3, 1, 0, 2, 0, 0]),
         n_edge=jnp.array([2, 5, 0, 0, 1, 0, 0]),
         nodes=self._make_nest(jnp.arange(14).reshape(7, 2)),
@@ -267,7 +268,7 @@ class ModelsTest(parameterized.TestCase):
         receivers=jnp.array([0, 0, 2, 1, 3, 2, 1, 5]))
 
     list_graphs = [
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([1]),
             n_edge=jnp.array([2]),
             nodes=self._make_nest(jnp.array([[0, 1]])),
@@ -275,7 +276,7 @@ class ModelsTest(parameterized.TestCase):
             globals=self._make_nest(jnp.array([[0, 1]])),
             senders=jnp.array([0, 0]),
             receivers=jnp.array([0, 0])),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([3]),
             n_edge=jnp.array([5]),
             nodes=self._make_nest(jnp.array([[2, 3], [4, 5], [6, 7]])),
@@ -285,7 +286,7 @@ class ModelsTest(parameterized.TestCase):
             globals=self._make_nest(jnp.array([[2, 3]])),
             senders=jnp.array([0, 0, 1, 2, 2]),
             receivers=jnp.array([1, 0, 2, 1, 0])),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([1]),
             n_edge=jnp.array([0]),
             nodes=self._make_nest(jnp.array([[8, 9]])),
@@ -293,7 +294,7 @@ class ModelsTest(parameterized.TestCase):
             globals=self._make_nest(jnp.array([[4, 5]])),
             senders=jnp.array([]),
             receivers=jnp.array([])),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([0]),
             n_edge=jnp.array([0]),
             nodes=self._make_nest(jnp.zeros((0, 2))),
@@ -301,7 +302,7 @@ class ModelsTest(parameterized.TestCase):
             globals=self._make_nest(jnp.array([[6, 7]])),
             senders=jnp.array([]),
             receivers=jnp.array([])),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([2]),
             n_edge=jnp.array([1]),
             nodes=self._make_nest(jnp.array([[10, 11], [12, 13]])),
@@ -309,7 +310,7 @@ class ModelsTest(parameterized.TestCase):
             globals=self._make_nest(jnp.array([[8, 9]])),
             senders=jnp.array([1]),
             receivers=jnp.array([0])),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([0]),
             n_edge=jnp.array([0]),
             nodes=self._make_nest(jnp.zeros((0, 2))),
@@ -317,7 +318,7 @@ class ModelsTest(parameterized.TestCase):
             globals=self._make_nest(jnp.array([[10, 11]])),
             senders=jnp.array([]),
             receivers=jnp.array([])),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([0]),
             n_edge=jnp.array([0]),
             nodes=self._make_nest(jnp.zeros((0, 2))),
@@ -352,7 +353,7 @@ class ModelsTest(parameterized.TestCase):
                             _get_graph_network_no_edge_update,
                             _get_graph_network_no_global_update)
   def test_connect_graphnetwork_nones(self, network_fn):
-    batched_graphs_tuple = graph.GraphsTuple(
+    batched_graphs_tuple = GraphsTuple(
         n_node=jnp.array([1, 3, 1, 0, 2, 0, 0]),
         n_edge=jnp.array([2, 5, 0, 0, 1, 0, 0]),
         nodes=self._make_nest(jnp.arange(14).reshape(7, 2)),
@@ -380,7 +381,7 @@ class ModelsTest(parameterized.TestCase):
                             _get_relation_network,
                             _get_deep_sets)
   def test_connect_gnns(self, network_fn):
-    batched_graphs_tuple = graph.GraphsTuple(
+    batched_graphs_tuple = GraphsTuple(
         n_node=jnp.array([1, 3, 1, 0, 2, 0, 0]),
         n_edge=jnp.array([1, 7, 1, 0, 3, 0, 0]),
         nodes=jnp.arange(14).reshape(7, 2),
