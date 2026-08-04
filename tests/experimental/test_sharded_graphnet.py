@@ -13,21 +13,30 @@
 # limitations under the License.
 """Tests for sharded graphnet."""
 
-import functools
 
-from absl.testing import absltest
-from absl.testing import parameterized
+
+import functools
 import jax
 import jraph
-from jraph import utils
-from jraph.experimental import sharded_graphnet
 import numpy as np
+import pytest
+
+from jraph.graph import GraphsTuple
+from jraph.models import GraphNetwork
+from jraph.experimental.sharded_graphnet import (
+    ShardedEdgesGraphsTuple, 
+    ShardedEdgesGraphNetwork, 
+    graphs_tuple_to_broadcasted_sharded_graphs_tuple, 
+    broadcasted_sharded_graphs_tuple_to_graphs_tuple
+)
+from jraph.utils import batch_np
+
 
 def test_expected_device_count():
     assert jax.local_device_count() >= 3
 
 
-def _get_graphs_from_n_edge(n_edge):
+def _get_graphs_from_n_edge(n_edge: list[int]) -> GraphsTuple:
   """Get a graphs tuple from n_edge."""
   graphs = []
   for el in n_edge:
@@ -41,11 +50,11 @@ def _get_graphs_from_n_edge(n_edge):
             n_node=np.array([128]),
             globals=np.array([[el]]),
         ))
-  graphs = utils.batch_np(graphs)
+  graphs = batch_np(graphs)
   return graphs
 
 
-def get_graphs_tuples(n_edge, sharded_n_edge, device_graph_idx):
+def get_graphs_tuples(n_edge, sharded_n_edge, device_graph_idx) -> tuple[GraphsTuple, ShardedEdgesGraphsTuple]:
   sharded_n_edge = np.array(sharded_n_edge)
   device_graph_idx = np.array(device_graph_idx)
   devices = len(sharded_n_edge)
@@ -57,7 +66,7 @@ def get_graphs_tuples(n_edge, sharded_n_edge, device_graph_idx):
   # Broadcast replicated features to have a devices leading axis.
   broadcast = lambda x: np.broadcast_to(x[None, :], [devices] + list(x.shape))
 
-  sharded_graphs = sharded_graphnet.ShardedEdgesGraphsTuple(
+  sharded_graphs = ShardedEdgesGraphsTuple(
       device_senders=sharded_senders,
       device_receivers=sharded_receivers,
       device_edges=sharded_edges,
@@ -72,30 +81,58 @@ def get_graphs_tuples(n_edge, sharded_n_edge, device_graph_idx):
   return graphs, sharded_graphs
 
 
-class ShardedGraphnetTest(parameterized.TestCase):
 
-  @parameterized.named_parameters(
-      ('split_intermediate', [3, 5, 4, 3, 3]),
-      ('split_zero_last_edge', [1, 2, 5, 4, 6]),
-      ('split_one_over_multiple', [1, 11])
-  )
-  def test_sharded_same_as_non_sharded(self, n_edge):
+
+
+@pytest.mark.parametrize(
+    "n_edge",
+    [
+        pytest.param(
+            [3, 5, 4, 3, 3],
+            id="split-intermediate",
+        ),
+        pytest.param(
+            [1, 2, 5, 4, 6],
+            id="split-zero-last-edge",
+        ),
+        pytest.param(
+            [1, 11],
+            id="split-one-over-multiple",
+        ),
+    ],
+)
+def test_sharded_same_as_non_sharded(
+    n_edge: list[int],
+) -> None:
     in_tuple = _get_graphs_from_n_edge(n_edge)
     devices = 3
-    sharded_tuple = sharded_graphnet.graphs_tuple_to_broadcasted_sharded_graphs_tuple(
-        in_tuple, devices)
+
+    sharded_tuple = graphs_tuple_to_broadcasted_sharded_graphs_tuple(in_tuple, devices)
+
     update_fn = jraph.concatenated_args(lambda x: x)
-    sharded_gn = sharded_graphnet.ShardedEdgesGraphNetwork(
-        update_fn, update_fn, update_fn, num_shards=devices)
-    gn = jraph.GraphNetwork(update_fn, update_fn, update_fn)
-    sharded_out = jax.pmap(sharded_gn, axis_name='i')(sharded_tuple)
+
+    sharded_gn = ShardedEdgesGraphNetwork(
+        update_fn,
+        update_fn,
+        update_fn,
+        num_shards=devices,
+    )
+    gn = GraphNetwork(
+        update_fn,
+        update_fn,
+        update_fn,
+    )
+
+    sharded_out = jax.pmap(sharded_gn, axis_name="i",)(sharded_tuple)
     expected_out = gn(in_tuple)
-    reduced_out = sharded_graphnet.broadcasted_sharded_graphs_tuple_to_graphs_tuple(
-        sharded_out)
-    jax.tree_util.tree_map(
-        functools.partial(np.testing.assert_allclose, atol=1E-5, rtol=1E-5),
-        expected_out, reduced_out)
+    reduced_out = broadcasted_sharded_graphs_tuple_to_graphs_tuple(sharded_out)
 
-
-if __name__ == '__main__':
-  absltest.main()
+    jax.tree.map(
+        functools.partial(
+            np.testing.assert_allclose,
+            atol=1e-5,
+            rtol=1e-5,
+        ),
+        expected_out,
+        reduced_out,
+    )

@@ -14,59 +14,92 @@
 # limitations under the License.
 """Tests for graph.ogb_examples.data_utils."""
 
-import pathlib
-from absl.testing import absltest
-from absl.testing import parameterized
+from pathlib import Path
+
+import jax
 import jraph
-from examples.ogb import data_utils
 import numpy as np
-import tree
+import pytest
 
-class DataUtilsTest(parameterized.TestCase):
+from examples.ogb import data_utils
 
-  def setUp(self):
-    super(DataUtilsTest, self).setUp()
-    self._test_graph = jraph.GraphsTuple(
-        nodes=np.broadcast_to(
-            np.arange(10, dtype=np.float32)[:, None], (10, 10)),
-        edges=np.concatenate((
-            np.broadcast_to(np.arange(20, dtype=np.float32)[:, None], (20, 4)),
-            np.broadcast_to(np.arange(20, dtype=np.float32)[:, None], (20, 4))
-            )),
-        receivers=np.concatenate((np.arange(20), np.arange(20))),
-        senders=np.concatenate((np.arange(20), np.arange(20))),
-        globals={'label': np.array([1], dtype=np.int32)},
+
+@pytest.fixture
+def expected_graph() -> jraph.GraphsTuple:
+    nodes = np.broadcast_to(
+        np.arange(10, dtype=np.float32)[:, None],
+        (10, 10),
+    )
+
+    edge_features = np.broadcast_to(
+        np.arange(20, dtype=np.float32)[:, None],
+        (20, 4),
+    )
+
+    endpoints = np.arange(20)
+
+    return jraph.GraphsTuple(
+        nodes=nodes,
+        edges=np.concatenate((edge_features, edge_features)),
+        receivers=np.concatenate((endpoints, endpoints)),
+        senders=np.concatenate((endpoints, endpoints)),
+        globals={"label": np.array([1], dtype=np.int32)},
         n_node=np.array([10], dtype=np.int32),
-        n_edge=np.array([40], dtype=np.int32))
-    ogb_path = pathlib.Path(__file__).resolve().parent # pathlib.Path(data_utils.__file__).parents[0]
-    master_csv_path = pathlib.Path(ogb_path, 'test_data', 'master.csv')
-    split_path = pathlib.Path(ogb_path, 'test_data', 'train.csv.gz')
-    data_path = master_csv_path.parents[0]
-    self._reader = data_utils.DataReader(
-        data_path=data_path,
-        master_csv_path=master_csv_path,
-        split_path=split_path)
-
-  def test_total_num_graph(self):
-    self.assertEqual(self._reader.total_num_graphs, 1)
-
-  def test_expected_graph(self):
-    graph = next(self._reader)
-    with self.subTest('test_graph_equality'):
-      tree.map_structure(
-          np.testing.assert_almost_equal, graph, self._test_graph)
-    with self.subTest('stop_iteration'):
-      # One element in the dataset, so should have stop iteration.
-      with self.assertRaises(StopIteration):
-        next(self._reader)
-
-  def test_reader_repeat(self):
-    self._reader.repeat()
-    next(self._reader)
-    graph = next(self._reader)
-    # One graph in the test dataset so should be the same.
-    tree.map_structure(np.testing.assert_almost_equal, graph, self._test_graph)
+        n_edge=np.array([40], dtype=np.int32),
+    )
 
 
-if __name__ == '__main__':
-  absltest.main()
+@pytest.fixture
+def reader() -> data_utils.DataReader:
+    test_data = Path(__file__).resolve().parent / "test_data"
+
+    return data_utils.DataReader(
+        data_path=test_data,
+        master_csv_path=test_data / "master.csv",
+        split_path=test_data / "train.csv.gz",
+    )
+
+
+def test_total_num_graphs(
+    reader: data_utils.DataReader,
+) -> None:
+    assert reader.total_num_graphs == 1
+
+
+def test_reader_returns_expected_graph(
+    reader: data_utils.DataReader,
+    expected_graph: jraph.GraphsTuple,
+) -> None:
+    graph = next(reader)
+
+    jax.tree.map(
+        np.testing.assert_almost_equal,
+        graph,
+        expected_graph,
+    )
+
+
+def test_reader_stops_after_last_graph(
+    reader: data_utils.DataReader,
+) -> None:
+    next(reader)
+
+    with pytest.raises(StopIteration):
+        next(reader)
+
+
+def test_reader_repeat(
+    reader: data_utils.DataReader,
+    expected_graph: jraph.GraphsTuple,
+) -> None:
+    reader.repeat()
+
+    next(reader)
+    graph = next(reader)
+
+    # There is one graph in the test dataset, so iteration wraps around.
+    jax.tree.map(
+        np.testing.assert_almost_equal,
+        graph,
+        expected_graph,
+    )
