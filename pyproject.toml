@@ -58,11 +58,9 @@ ogb_examples = [
 
 [dependency-groups]
 dev = [
-    "absl-py>=0.9",
     "pytest>=8",
 ]
 test = [
-    "absl-py>=2.5.0",
     "basedpyright>=1.39.9",
     "dm-haiku>=0.0.17",
     "dm-tree>=0.1.10",

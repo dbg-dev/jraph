@@ -282,11 +282,9 @@ ogb-examples = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "absl-py" },
     { name = "pytest" },
 ]
 test = [
-    { name = "absl-py" },
     { name = "basedpyright" },
     { name = "dm-haiku" },
     { name = "dm-tree" },
@@ -319,12 +317,8 @@ requires-dist = [
 provides-extras = ["examples", "ogb-examples"]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "absl-py", specifier = ">=0.9" },
-    { name = "pytest", specifier = ">=8" },
-]
+dev = [{ name = "pytest", specifier = ">=8" }]
 test = [
-    { name = "absl-py", specifier = ">=2.5.0" },
     { name = "basedpyright", specifier = ">=1.39.9" },
     { name = "dm-haiku", specifier = ">=0.0.17" },
     { name = "dm-tree", specifier = ">=0.1.10" },
