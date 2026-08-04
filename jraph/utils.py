@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utilities for working with `GraphsTuple`s."""
+
 import functools
 from typing import Callable
 from collections.abc import Generator, Iterator, Sequence
@@ -20,7 +21,7 @@ from jax import lax
 import jax.numpy as jnp
 import jax.tree_util as tree
 import numpy as np
-from jraph._types import ArrayTree
+from jraph.types import ArrayTree
 from jraph.graph import GraphsTuple
 
 
@@ -169,7 +170,7 @@ def segment_normalize(
     num_segments: int | None = None,
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
-    eps = 1e-8,
+    eps=1e-8,
 ) -> jax.Array:
     """Normalizes data within each segment.
 
@@ -757,7 +758,7 @@ def unpad_with_graphs(padded_graph: GraphsTuple) -> GraphsTuple:
     n_padding_node = get_number_of_padding_with_graphs_nodes(padded_graph)
     n_padding_edge = get_number_of_padding_with_graphs_edges(padded_graph)
 
-    def remove_edge_padding(edge_array: jax.Array| ArrayTree) -> ArrayTree | jax.Array:
+    def remove_edge_padding(edge_array: jax.Array | ArrayTree) -> ArrayTree | jax.Array:
         if n_padding_edge == 0:
             return edge_array
         return edge_array[:-n_padding_edge]
@@ -1074,9 +1075,7 @@ def dynamically_batch(
         yield pad_with_graphs(batched_graph, n_node, n_edge, n_graph)
 
 
-def _expand_trailing_dimensions(
-    array: jax.Array, template: jax.Array
-) -> jax.Array:
+def _expand_trailing_dimensions(array: jax.Array, template: jax.Array) -> jax.Array:
     missing_dims = len(template.shape) - len(array.shape)
     out = jnp.reshape(array, array.shape + (1,) * missing_dims)
     assert out.dtype == array.dtype

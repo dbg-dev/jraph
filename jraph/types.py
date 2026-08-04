@@ -8,67 +8,56 @@ from collections.abc import Iterable, Mapping
 type ArrayTree = jax.Array | Iterable[ArrayTree] | Mapping[Hashable, ArrayTree]
 
 # All features will be an ArrayTree.
-NodeFeatures = EdgeFeatures = SenderFeatures = ReceiverFeatures = Globals = ArrayTree
+type NodeFeatures = ArrayTree
+type EdgeFeatures = ArrayTree
+type SenderFeatures = ArrayTree
+type ReceiverFeatures = ArrayTree
+type Globals = ArrayTree
 
 # Signature:
 # (edges of each node to be aggregated, segment ids, number of segments) ->
 # aggregated edges
-AggregateEdgesToNodesFn = Callable[
-    [EdgeFeatures, jax.Array, int], NodeFeatures]
+type AggregateEdgesToNodesFn = Callable[[EdgeFeatures, jax.Array, int], NodeFeatures]
 
 
 # Signature:
 # (nodes of each graph to be aggregated, segment ids, number of segments) ->
 # aggregated nodes
-AggregateNodesToGlobalsFn = Callable[
-  [NodeFeatures, jax.Array, int],
-  Globals
-]
+type AggregateNodesToGlobalsFn = Callable[[NodeFeatures, jax.Array, int], Globals]
 
 # Signature:
 # (edges of each graph to be aggregated, segment ids, number of segments) ->
 # aggregated edges
-AggregateEdgesToGlobalsFn = Callable[
-  [EdgeFeatures, jax.Array, int],
-  Globals
-]
+type AggregateEdgesToGlobalsFn = Callable[[EdgeFeatures, jax.Array, int], Globals]
 
 # Signature:
 # (edge features, sender node features, receiver node features, globals) ->
 # attention weights
-AttentionLogitFn = Callable[
-    [EdgeFeatures, SenderFeatures, ReceiverFeatures, Globals], ArrayTree]
+type AttentionLogitFn = Callable[
+    [EdgeFeatures, SenderFeatures, ReceiverFeatures, Globals], ArrayTree
+]
 
 # Signature:
 # (edge features, weights) -> edge features for node update
-AttentionReduceFn = Callable[[EdgeFeatures, ArrayTree], EdgeFeatures]
+type AttentionReduceFn = Callable[[EdgeFeatures, ArrayTree], EdgeFeatures]
 
 # Signature:
 # (edges to be normalized, segment ids, number of segments) ->
 # normalized edges
-AttentionNormalizeFn = Callable[
-  [EdgeFeatures, jax.Array, int], 
-  EdgeFeatures
-]
+type AttentionNormalizeFn = Callable[[EdgeFeatures, jax.Array, int], EdgeFeatures]
 
 # Signature:
 # (edge features, sender node features, receiver node features, globals) ->
 # updated edge features
-GNUpdateEdgeFn = Callable[
-    [EdgeFeatures, SenderFeatures, ReceiverFeatures, Globals], 
-    EdgeFeatures
+type GNUpdateEdgeFn = Callable[
+    [EdgeFeatures, SenderFeatures, ReceiverFeatures, Globals], EdgeFeatures
 ]
 
 # Signature:
 # (node features, outgoing edge features, incoming edge features,
 #  globals) -> updated node features
-GNUpdateNodeFn = Callable[
-    [NodeFeatures, SenderFeatures, ReceiverFeatures, Globals], 
-    NodeFeatures
+type GNUpdateNodeFn = Callable[
+    [NodeFeatures, SenderFeatures, ReceiverFeatures, Globals], NodeFeatures
 ]
 
-GNUpdateGlobalFn = Callable[
-  [NodeFeatures, EdgeFeatures, Globals], 
-  Globals
-]
-
+type GNUpdateGlobalFn = Callable[[NodeFeatures, EdgeFeatures, Globals], Globals]
