@@ -19,8 +19,7 @@ import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
 import jraph
-from jraph import graph as gn_graph
-from jraph import utils
+from jraph import ArrayTree, segment_softmax, segment_sum
 import numpy as np
 
 
@@ -39,7 +38,7 @@ class ShardedEdgesGraphsTuple(NamedTuple):
     `graphs_tuple_to_broadcasted_sharded_grahs_tuple`.
 
 
-  The values of `nodes`, `device_edges` and `globals` can be gn_graph.ArrayTree
+  The values of `nodes`, `device_edges` and `globals` can be ArrayTree
   - nests of features with `jax` compatible values. For example, `nodes` in a
   graph may have more than one type of attribute.
 
@@ -127,13 +126,13 @@ class ShardedEdgesGraphsTuple(NamedTuple):
       is split over 2 devices. If a `0` is the first in `device_graph_idx` then
       that indicates the first graph, otherwise it indicates a padding value.
   """
-  nodes: gn_graph.ArrayTree
-  device_edges: gn_graph.ArrayTree
+  nodes: ArrayTree
+  device_edges: ArrayTree
   device_receivers: jnp.ndarray  # with integer dtype
   device_senders: jnp.ndarray  # with integer dtype
   receivers: jnp.ndarray  # with integer dtype
   senders: jnp.ndarray  # with integer dtype
-  globals: gn_graph.ArrayTree
+  globals: ArrayTree
   device_n_edge: jnp.ndarray  # with integer dtype
   n_node: jnp.ndarray  # with integer dtype
   n_edge: jnp.ndarray  # with integer dtype
@@ -287,16 +286,16 @@ def broadcasted_sharded_graphs_tuple_to_graphs_tuple(sharded_graphs_tuple):
 
 def sharded_segment_sum(data, indices, num_segments, axis_index_groups):
   """Segment sum over data on multiple devices."""
-  device_segment_sum = utils.segment_sum(data, indices, num_segments)
+  device_segment_sum = segment_sum(data, indices, num_segments)
   return jax.lax.psum(
       device_segment_sum, axis_name='i', axis_index_groups=axis_index_groups)
 
 
-ShardedEdgeFeatures = gn_graph.ArrayTree
+ShardedEdgeFeatures = ArrayTree
 AggregateShardedEdgesToGlobalsFn = Callable[
-    [ShardedEdgeFeatures, jnp.ndarray, int, jnp.ndarray], gn_graph.ArrayTree]
+    [ShardedEdgeFeatures, jnp.ndarray, int, jnp.ndarray], ArrayTree]
 AggregateShardedEdgesToNodesFn = Callable[
-    [gn_graph.ArrayTree, jnp.ndarray, int, List[List[int]]], jraph.NodeFeatures]
+    [ArrayTree, jnp.ndarray, int, List[List[int]]], jraph.NodeFeatures]
 
 
 # pylint: disable=invalid-name
@@ -306,8 +305,7 @@ def ShardedEdgesGraphNetwork(
     update_global_fn: Optional[jraph.GNUpdateGlobalFn] = None,
     aggregate_edges_for_nodes_fn:
     AggregateShardedEdgesToNodesFn = sharded_segment_sum,
-    aggregate_nodes_for_globals_fn: jraph.AggregateNodesToGlobalsFn = jax.ops
-    .segment_sum,
+    aggregate_nodes_for_globals_fn: jraph.AggregateNodesToGlobalsFn = jax.ops.segment_sum,
     aggregate_edges_for_globals_fn:
     AggregateShardedEdgesToGlobalsFn = sharded_segment_sum,
     attention_logit_fn: Optional[jraph.AttentionLogitFn] = None,
@@ -422,7 +420,7 @@ def ShardedEdgesGraphNetwork(
       logits = attention_logit_fn(device_edges, sent_attributes,
                                   received_attributes, global_edge_attributes)
       tree_calculate_weights = functools.partial(
-          utils.segment_softmax, segment_ids=receivers, num_segments=sum_n_node)
+          segment_softmax, segment_ids=receivers, num_segments=sum_n_node)
       weights = tree.tree_map(tree_calculate_weights, logits)
       device_edges = attention_reduce_fn(device_edges, weights)
 

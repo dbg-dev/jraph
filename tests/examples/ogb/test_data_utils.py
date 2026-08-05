@@ -17,15 +17,15 @@
 from pathlib import Path
 
 import jax
-import jraph
 import numpy as np
 import pytest
 
+from jraph import GraphsTuple
 from examples.ogb import data_utils
 
 
 @pytest.fixture
-def expected_graph() -> jraph.GraphsTuple:
+def expected_graph() -> GraphsTuple:
     nodes = np.broadcast_to(
         np.arange(10, dtype=np.float32)[:, None],
         (10, 10),
@@ -38,7 +38,7 @@ def expected_graph() -> jraph.GraphsTuple:
 
     endpoints = np.arange(20)
 
-    return jraph.GraphsTuple(
+    return GraphsTuple(
         nodes=nodes,
         edges=np.concatenate((edge_features, edge_features)),
         receivers=np.concatenate((endpoints, endpoints)),
@@ -68,7 +68,7 @@ def test_total_num_graphs(
 
 def test_reader_returns_expected_graph(
     reader: data_utils.DataReader,
-    expected_graph: jraph.GraphsTuple,
+    expected_graph: GraphsTuple,
 ) -> None:
     graph = next(reader)
 
@@ -90,7 +90,7 @@ def test_reader_stops_after_last_graph(
 
 def test_reader_repeat(
     reader: data_utils.DataReader,
-    expected_graph: jraph.GraphsTuple,
+    expected_graph: GraphsTuple,
 ) -> None:
     reader.repeat()
 

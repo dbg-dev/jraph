@@ -13,23 +13,18 @@
 # limitations under the License.
 """Tests for sharded graphnet."""
 
-
-
 import functools
 import jax
-import jraph
 import numpy as np
 import pytest
 
-from jraph.graph import GraphsTuple
-from jraph.models import GraphNetwork
+from jraph import GraphsTuple, GraphNetwork, batch_np, concatenated_args
 from jraph.experimental.sharded_graphnet import (
     ShardedEdgesGraphsTuple, 
     ShardedEdgesGraphNetwork, 
     graphs_tuple_to_broadcasted_sharded_graphs_tuple, 
     broadcasted_sharded_graphs_tuple_to_graphs_tuple
 )
-from jraph.utils import batch_np
 
 
 def test_expected_device_count():
@@ -41,7 +36,7 @@ def _get_graphs_from_n_edge(n_edge: list[int]) -> GraphsTuple:
   graphs = []
   for el in n_edge:
     graphs.append(
-        jraph.GraphsTuple(
+        GraphsTuple(
             nodes=np.random.uniform(size=(128, 2)),
             edges=np.random.uniform(size=(el, 2)),
             senders=np.random.choice(128, el),
@@ -109,7 +104,7 @@ def test_sharded_same_as_non_sharded(
 
     sharded_tuple = graphs_tuple_to_broadcasted_sharded_graphs_tuple(in_tuple, devices)
 
-    update_fn = jraph.concatenated_args(lambda x: x)
+    update_fn = concatenated_args(lambda x: x)
 
     sharded_gn = ShardedEdgesGraphNetwork(
         update_fn,

@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for jraph.utils."""
+"""Tests for jraph."""
 
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 import jax
@@ -21,9 +21,37 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from jraph import graph
-from jraph import utils
-
+from jraph import (
+    GraphsTuple,
+    batch,
+    batch_np,
+    unbatch,
+    unbatch_np,
+    pad_with_graphs,
+    unpad_with_graphs,
+    get_number_of_padding_with_graphs_graphs,
+    get_number_of_padding_with_graphs_nodes,
+    get_number_of_padding_with_graphs_edges,
+    get_node_padding_mask,
+    get_edge_padding_mask,
+    get_graph_padding_mask,
+    zero_out_padding,
+    with_zero_out_padding_outputs,
+    segment_sum,
+    segment_normalize,
+    segment_variance,
+    segment_mean,
+    segment_max,
+    segment_min,
+    segment_softmax,
+    segment_max_or_constant,
+    segment_min_or_constant,
+    partition_softmax,
+    concatenated_args,
+    get_fully_connected_graph,
+    dynamically_batch,
+    sparse_matrix_to_graphs_tuple
+)
 
 Tree = Any
 SegmentFunction = Callable[..., jax.Array]
@@ -72,7 +100,7 @@ def _get_random_graph(
     include_node_features: bool = True,
     include_edge_features: bool = True,
     include_globals: bool = True,
-) -> graph.GraphsTuple:
+) -> GraphsTuple:
     n_graph = int(rng.integers(1, max_n_graph + 1))
     n_node = rng.integers(0, 10, size=n_graph, dtype=np.int32)
     n_edge = rng.integers(0, 20, size=n_graph, dtype=np.int32)
@@ -108,7 +136,7 @@ def _get_random_graph(
         jnp.asarray(rng.random((n_graph, 5))) if include_globals else None
     )
 
-    return graph.GraphsTuple(
+    return GraphsTuple(
         n_node=jnp.asarray(n_node),
         n_edge=jnp.asarray(n_edge),
         nodes=nodes,
@@ -120,9 +148,9 @@ def _get_random_graph(
 
 
 def _get_list_and_batched_graph(
-) -> tuple[list[graph.GraphsTuple], graph.GraphsTuple]:
+) -> tuple[list[GraphsTuple], GraphsTuple]:
     """Return individual graphs and their expected batched representation."""
-    batched_graph = graph.GraphsTuple(
+    batched_graph = GraphsTuple(
         n_node=jnp.array([1, 3, 1, 0, 2, 0, 0]),
         n_edge=jnp.array([2, 5, 0, 0, 1, 0, 0]),
         nodes=_make_nest(jnp.arange(14).reshape(7, 2)),
@@ -133,7 +161,7 @@ def _get_list_and_batched_graph(
     )
 
     graphs = [
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([1]),
             n_edge=jnp.array([2]),
             nodes=_make_nest(jnp.array([[0, 1]])),
@@ -142,7 +170,7 @@ def _get_list_and_batched_graph(
             senders=jnp.array([0, 0]),
             receivers=jnp.array([0, 0]),
         ),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([3]),
             n_edge=jnp.array([5]),
             nodes=_make_nest(jnp.array([[2, 3], [4, 5], [6, 7]])),
@@ -161,7 +189,7 @@ def _get_list_and_batched_graph(
             senders=jnp.array([0, 0, 1, 2, 2]),
             receivers=jnp.array([1, 0, 2, 1, 0]),
         ),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([1]),
             n_edge=jnp.array([0]),
             nodes=_make_nest(jnp.array([[8, 9]])),
@@ -170,7 +198,7 @@ def _get_list_and_batched_graph(
             senders=jnp.array([], dtype=jnp.int32),
             receivers=jnp.array([], dtype=jnp.int32),
         ),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([0]),
             n_edge=jnp.array([0]),
             nodes=_make_nest(jnp.zeros((0, 2))),
@@ -179,7 +207,7 @@ def _get_list_and_batched_graph(
             senders=jnp.array([], dtype=jnp.int32),
             receivers=jnp.array([], dtype=jnp.int32),
         ),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([2]),
             n_edge=jnp.array([1]),
             nodes=_make_nest(jnp.array([[10, 11], [12, 13]])),
@@ -188,7 +216,7 @@ def _get_list_and_batched_graph(
             senders=jnp.array([1]),
             receivers=jnp.array([0]),
         ),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([0]),
             n_edge=jnp.array([0]),
             nodes=_make_nest(jnp.zeros((0, 2))),
@@ -197,7 +225,7 @@ def _get_list_and_batched_graph(
             senders=jnp.array([], dtype=jnp.int32),
             receivers=jnp.array([], dtype=jnp.int32),
         ),
-        graph.GraphsTuple(
+        GraphsTuple(
             n_node=jnp.array([0]),
             n_edge=jnp.array([0]),
             nodes=_make_nest(jnp.zeros((0, 2))),
@@ -207,8 +235,8 @@ def _get_list_and_batched_graph(
             receivers=jnp.array([], dtype=jnp.int32),
         ),
         # An entirely empty GraphsTuple is accepted by batch(), but unbatch()
-        # deliberately omits it because it contains no graph.
-        graph.GraphsTuple(
+        # deliberately omits it because it contains no 
+        GraphsTuple(
             n_node=jnp.array([], dtype=jnp.int32),
             n_edge=jnp.array([], dtype=jnp.int32),
             nodes=_make_nest(jnp.zeros((0, 2))),
@@ -230,13 +258,13 @@ def _get_list_and_batched_graph(
 @pytest.mark.parametrize(
     ("batch_fn", "unbatch_fn"),
     [
-        pytest.param(utils.batch, utils.unbatch, id="jax"),
-        pytest.param(utils.batch_np, utils.unbatch_np, id="numpy"),
+        pytest.param(batch, unbatch, id="jax"),
+        pytest.param(batch_np, unbatch_np, id="numpy"),
     ],
 )
 def test_batch_matches_expected(
-    batch_fn: Callable[[Sequence[graph.GraphsTuple]], graph.GraphsTuple],
-    unbatch_fn: Callable[[graph.GraphsTuple], list[graph.GraphsTuple]],
+    batch_fn: Callable[[Sequence[GraphsTuple]], GraphsTuple],
+    unbatch_fn: Callable[[GraphsTuple], list[GraphsTuple]],
 ) -> None:
     del unbatch_fn
     graphs, expected = _get_list_and_batched_graph()
@@ -246,13 +274,13 @@ def test_batch_matches_expected(
 @pytest.mark.parametrize(
     ("batch_fn", "unbatch_fn"),
     [
-        pytest.param(utils.batch, utils.unbatch, id="jax"),
-        pytest.param(utils.batch_np, utils.unbatch_np, id="numpy"),
+        pytest.param(batch, unbatch, id="jax"),
+        pytest.param(batch_np, unbatch_np, id="numpy"),
     ],
 )
 def test_unbatch_matches_expected(
-    batch_fn: Callable[[Sequence[graph.GraphsTuple]], graph.GraphsTuple],
-    unbatch_fn: Callable[[graph.GraphsTuple], list[graph.GraphsTuple]],
+    batch_fn: Callable[[Sequence[GraphsTuple]], GraphsTuple],
+    unbatch_fn: Callable[[GraphsTuple], list[GraphsTuple]],
 ) -> None:
     del batch_fn
     expected, batched = _get_list_and_batched_graph()
@@ -284,7 +312,7 @@ def test_batch_unbatch_round_trip_for_batched_graph(
             include_node_features=include_nodes,
             include_edge_features=include_edges,
         )
-        recovered = utils.batch(utils.unbatch(original))
+        recovered = batch(unbatch(original))
         _assert_tree_allclose(recovered, original)
 
 
@@ -310,15 +338,15 @@ def test_unbatch_batch_round_trip_for_graph_list(
             )
             for _ in range(int(rng.integers(1, 10)))
         ]
-        recovered = utils.unbatch(utils.batch(graphs))
+        recovered = unbatch(batch(graphs))
         _assert_tree_allclose(recovered, graphs)
 
 
 def test_pad_with_graphs_matches_expected() -> None:
     _, graphs = _get_list_and_batched_graph()
 
-    actual = utils.pad_with_graphs(graphs, 10, 12, 9)
-    expected = graph.GraphsTuple(
+    actual = pad_with_graphs(graphs, 10, 12, 9)
+    expected = GraphsTuple(
         n_node=jnp.concatenate([graphs.n_node, jnp.array([3, 0])]),
         n_edge=jnp.concatenate([graphs.n_edge, jnp.array([4, 0])]),
         nodes=jax.tree.map(
@@ -351,8 +379,8 @@ def test_pad_with_graphs_matches_expected() -> None:
 def test_unpad_with_graphs_matches_expected() -> None:
     _, graphs = _get_list_and_batched_graph()
 
-    actual = utils.unpad_with_graphs(graphs)
-    expected = graph.GraphsTuple(
+    actual = unpad_with_graphs(graphs)
+    expected = GraphsTuple(
         n_node=jnp.array([1, 3, 1, 0]),
         n_edge=jnp.array([2, 5, 0, 0]),
         nodes=_make_nest(jnp.arange(10).reshape(5, 2)),
@@ -383,52 +411,52 @@ def test_pad_unpad_round_trip(
             include_node_features=include_nodes,
             include_edge_features=include_edges,
         )
-        padded = utils.pad_with_graphs(original, 101, 200, 11)
-        _assert_tree_allclose(utils.unpad_with_graphs(padded), original)
+        padded = pad_with_graphs(original, 101, 200, 11)
+        _assert_tree_allclose(unpad_with_graphs(padded), original)
 
 
 def test_pad_unpad_round_trip_with_exact_edge_budget() -> None:
     rng = np.random.default_rng(42)
     original = _get_random_graph(rng)
 
-    padded = utils.pad_with_graphs(
+    padded = pad_with_graphs(
         original,
         n_node=int(np.asarray(original.n_node).sum()) + 1,
         n_edge=int(np.asarray(original.n_edge).sum()),
         n_graph=original.n_node.shape[0] + 1,
     )
 
-    _assert_tree_allclose(utils.unpad_with_graphs(padded), original)
+    _assert_tree_allclose(unpad_with_graphs(padded), original)
 
 
 _PADDING_METADATA_CASES = [
     pytest.param(
-        utils.get_number_of_padding_with_graphs_graphs,
+        get_number_of_padding_with_graphs_graphs,
         3,
         id="graph-count",
     ),
     pytest.param(
-        utils.get_number_of_padding_with_graphs_nodes,
+        get_number_of_padding_with_graphs_nodes,
         2,
         id="node-count",
     ),
     pytest.param(
-        utils.get_number_of_padding_with_graphs_edges,
+        get_number_of_padding_with_graphs_edges,
         1,
         id="edge-count",
     ),
     pytest.param(
-        utils.get_node_padding_mask,
+        get_node_padding_mask,
         jnp.array([True, True, True, True, True, False, False]),
         id="node-mask",
     ),
     pytest.param(
-        utils.get_edge_padding_mask,
+        get_edge_padding_mask,
         jnp.array([True, True, True, True, True, True, True, False]),
         id="edge-mask",
     ),
     pytest.param(
-        utils.get_graph_padding_mask,
+        get_graph_padding_mask,
         jnp.array([True, True, True, True, False, False, False]),
         id="graph-mask",
     ),
@@ -438,7 +466,7 @@ _PADDING_METADATA_CASES = [
 @pytest.mark.parametrize("use_jit", [False, True], ids=["eager", "jit"])
 @pytest.mark.parametrize(("metadata_fn", "expected"), _PADDING_METADATA_CASES)
 def test_padding_metadata(
-    metadata_fn: Callable[[graph.GraphsTuple], jax.Array],
+    metadata_fn: Callable[[GraphsTuple], jax.Array],
     expected: Any,
     use_jit: bool,
 ) -> None:
@@ -453,7 +481,7 @@ def test_padding_metadata(
 
 
 def test_segment_sum() -> None:
-    result = utils.segment_sum(
+    result = segment_sum(
         jnp.arange(9),
         jnp.array([0, 1, 2, 0, 4, 0, 1, 1, 0]),
         6,
@@ -462,7 +490,7 @@ def test_segment_sum() -> None:
 
 
 def test_segment_sum_infers_num_segments() -> None:
-    result = utils.segment_sum(
+    result = segment_sum(
         jnp.arange(9),
         jnp.array([0, 1, 2, 0, 4, 0, 1, 1, 0]),
     )
@@ -479,7 +507,7 @@ def test_segment_mean(nan_data: bool) -> None:
         data = data.at[0].set(jnp.nan)
         expected = expected.at[0].set(jnp.nan)
 
-    np.testing.assert_allclose(utils.segment_mean(data, segment_ids, 6), expected)
+    np.testing.assert_allclose(segment_mean(data, segment_ids, 6), expected)
 
 
 @pytest.mark.parametrize("nan_data", [False, True], ids=["finite", "nan"])
@@ -499,7 +527,7 @@ def test_segment_variance(nan_data: bool) -> None:
         expected = expected.at[0].set(jnp.nan)
 
     np.testing.assert_allclose(
-        utils.segment_variance(data, segment_ids, 3),
+        segment_variance(data, segment_ids, 3),
         expected,
     )
 
@@ -524,7 +552,7 @@ def test_segment_normalize(nan_data: bool) -> None:
         expected = expected.at[:3].set(jnp.nan)
 
     np.testing.assert_allclose(
-        utils.segment_normalize(data, segment_ids, 3),
+        segment_normalize(data, segment_ids, 3),
         expected,
     )
 
@@ -760,7 +788,7 @@ def test_segment_max(
         unique_indices,
     )
     actual = _apply_segment_function(
-        utils.segment_max,
+        segment_max,
         data,
         segment_ids,
         num_segments,
@@ -783,7 +811,7 @@ def test_segment_max_infers_num_segments(
         indices_are_sorted,
         unique_indices,
     )
-    actual = utils.segment_max(
+    actual = segment_max(
         data,
         segment_ids,
         indices_are_sorted=indices_are_sorted,
@@ -808,7 +836,7 @@ def test_segment_min(
         unique_indices,
     )
     actual = _apply_segment_function(
-        utils.segment_min,
+        segment_min,
         data,
         segment_ids,
         num_segments,
@@ -831,7 +859,7 @@ def test_segment_min_infers_num_segments(
         indices_are_sorted,
         unique_indices,
     )
-    actual = utils.segment_min(
+    actual = segment_min(
         data,
         segment_ids,
         indices_are_sorted=indices_are_sorted,
@@ -856,7 +884,7 @@ def test_segment_max_or_constant(
         unique_indices,
     )
     actual = _apply_segment_function(
-        utils.segment_max_or_constant,
+        segment_max_or_constant,
         data,
         segment_ids,
         num_segments,
@@ -879,7 +907,7 @@ def test_segment_max_or_constant_infers_num_segments(
         indices_are_sorted,
         unique_indices,
     )
-    actual = utils.segment_max_or_constant(
+    actual = segment_max_or_constant(
         data,
         segment_ids,
         indices_are_sorted=indices_are_sorted,
@@ -905,7 +933,7 @@ def test_segment_max_or_constant_has_finite_gradients(
     )
 
     def objective(values: jax.Array) -> jax.Array:
-        result = utils.segment_max_or_constant(
+        result = segment_max_or_constant(
             values,
             segment_ids,
             num_segments,
@@ -934,7 +962,7 @@ def test_segment_max_or_constant_2d(
         two_dimensional=True,
     )
     actual = _apply_segment_function(
-        utils.segment_max_or_constant,
+        segment_max_or_constant,
         data,
         segment_ids,
         num_segments,
@@ -960,7 +988,7 @@ def test_segment_min_or_constant(
         unique_indices,
     )
     actual = _apply_segment_function(
-        utils.segment_min_or_constant,
+        segment_min_or_constant,
         data,
         segment_ids,
         num_segments,
@@ -983,7 +1011,7 @@ def test_segment_min_or_constant_infers_num_segments(
         indices_are_sorted,
         unique_indices,
     )
-    actual = utils.segment_min_or_constant(
+    actual = segment_min_or_constant(
         data,
         segment_ids,
         indices_are_sorted=indices_are_sorted,
@@ -1009,7 +1037,7 @@ def test_segment_min_or_constant_has_finite_gradients(
     )
 
     def objective(values: jax.Array) -> jax.Array:
-        result = utils.segment_min_or_constant(
+        result = segment_min_or_constant(
             values,
             segment_ids,
             num_segments,
@@ -1038,7 +1066,7 @@ def test_segment_min_or_constant_2d(
         two_dimensional=True,
     )
     actual = _apply_segment_function(
-        utils.segment_min_or_constant,
+        segment_min_or_constant,
         data,
         segment_ids,
         num_segments,
@@ -1076,9 +1104,9 @@ def test_segment_softmax_with_explicit_num_segments(
         expected = expected.at[jnp.array([0, 3, 5, 8])].set(jnp.nan)
 
     apply_fn = (
-        jax.jit(utils.segment_softmax, static_argnums=2)
+        jax.jit(segment_softmax, static_argnums=2)
         if use_jit
-        else utils.segment_softmax
+        else segment_softmax
     )
     np.testing.assert_allclose(apply_fn(data, segment_ids, 6), expected)
 
@@ -1105,7 +1133,7 @@ def test_segment_softmax_infers_num_segments(nan_data: bool) -> None:
         data = data.at[0].set(jnp.nan)
         expected = expected.at[jnp.array([0, 3, 5, 8])].set(jnp.nan)
 
-    np.testing.assert_allclose(utils.segment_softmax(data, segment_ids), expected)
+    np.testing.assert_allclose(segment_softmax(data, segment_ids), expected)
 
 
 @pytest.mark.parametrize("use_jit", [False, True], ids=["eager", "jit"])
@@ -1127,9 +1155,9 @@ def test_partition_softmax_with_explicit_partition_sum(use_jit: bool) -> None:
     )
 
     apply_fn = (
-        jax.jit(utils.partition_softmax, static_argnums=2)
+        jax.jit(partition_softmax, static_argnums=2)
         if use_jit
-        else utils.partition_softmax
+        else partition_softmax
     )
     np.testing.assert_allclose(
         apply_fn(data, partitions, 9),
@@ -1157,7 +1185,7 @@ def test_partition_softmax_infers_partition_sum() -> None:
     )
 
     np.testing.assert_allclose(
-        utils.partition_softmax(data, partitions),
+        partition_softmax(data, partitions),
         expected,
         atol=1e-5,
         rtol=1e-5,
@@ -1199,9 +1227,9 @@ def test_get_fully_connected_graph_shapes(
     global_features = rng.random((n_graph, 32)) if include_globals else None
 
     apply_fn = (
-        jax.jit(utils.get_fully_connected_graph, static_argnums=(0, 1))
+        jax.jit(get_fully_connected_graph, static_argnums=(0, 1))
         if use_jit
-        else utils.get_fully_connected_graph
+        else get_fully_connected_graph
     )
     result = apply_fn(n_node, n_graph, node_features, global_features)
 
@@ -1230,7 +1258,7 @@ def test_get_fully_connected_graph_sender_receiver_indices(
     n_node: int,
     n_graph: int,
 ) -> None:
-    result = utils.get_fully_connected_graph(n_node, n_graph)
+    result = get_fully_connected_graph(n_node, n_graph)
 
     if n_node:
         node_indices = np.arange(n_node)
@@ -1240,7 +1268,7 @@ def test_get_fully_connected_graph_sender_receiver_indices(
         expected_senders = np.array([], dtype=np.int32)
         expected_receivers = np.array([], dtype=np.int32)
 
-    for individual_graph in utils.unbatch(result):
+    for individual_graph in unbatch(result):
         np.testing.assert_array_equal(individual_graph.senders, expected_senders)
         np.testing.assert_array_equal(
             individual_graph.receivers,
@@ -1261,12 +1289,12 @@ def test_get_fully_connected_graph_without_self_edges(
     n_node: int,
     n_graph: int,
 ) -> None:
-    with_self_edges = utils.get_fully_connected_graph(
+    with_self_edges = get_fully_connected_graph(
         n_node,
         n_graph,
         add_self_edges=True,
     )
-    without_self_edges = utils.get_fully_connected_graph(
+    without_self_edges = get_fully_connected_graph(
         n_node,
         n_graph,
         add_self_edges=False,
@@ -1300,7 +1328,7 @@ def test_get_fully_connected_graph_without_self_edges(
     ],
 )
 def test_get_fully_connected_graph_edge_order(add_self_edges: bool) -> None:
-    result = utils.get_fully_connected_graph(
+    result = get_fully_connected_graph(
         n_node_per_graph=3,
         n_graph=1,
         add_self_edges=add_self_edges,
@@ -1371,7 +1399,7 @@ def test_concatenated_args(
         for name, shape in kwargs_shapes.items()
     }
 
-    @utils.concatenated_args(axis=axis)
+    @concatenated_args(axis=axis)
     def identity(features: jax.Array) -> jax.Array:
         return features
 
@@ -1401,14 +1429,14 @@ def _make_dynamic_batch_graph(
     add_globals: bool,
     num_nodes: tuple[int, ...] = _DB_NUM_NODES,
     num_edges: tuple[int, ...] = _DB_NUM_EDGES,
-) -> graph.GraphsTuple:
+) -> GraphsTuple:
     total_num_nodes = sum(num_nodes)
     total_num_edges = sum(num_edges)
     globals_ = (
         _make_nest(rng.normal(size=_DB_GLOBAL_SHAPE)) if add_globals else {}
     )
 
-    return graph.GraphsTuple(
+    return GraphsTuple(
         nodes=_make_nest(
             rng.normal(size=(total_num_nodes, *_DB_NODE_SHAPE))
         ),
@@ -1492,9 +1520,9 @@ def test_dynamically_batch(
         _make_dynamic_batch_graph(rng, add_globals=use_globals)
         for _ in range(4)
     ]
-    input_graphs = [*graphs, *utils.unbatch_np(graphs[-1])]
+    input_graphs = [*graphs, *unbatch_np(graphs[-1])]
 
-    batches = list(utils.dynamically_batch(iter(input_graphs), **batch_kwargs))
+    batches = list(dynamically_batch(iter(input_graphs), **batch_kwargs))
 
     assert len(batches) == 5
     for batch in batches:
@@ -1504,10 +1532,10 @@ def test_dynamically_batch(
             assert edges.shape[0] == batch_kwargs["n_edge"]
 
         assert len(batch.n_node) == batch_kwargs["n_graph"]
-        assert int(utils.get_number_of_padding_with_graphs_nodes(batch)) == (
+        assert int(get_number_of_padding_with_graphs_nodes(batch)) == (
             batch_kwargs["n_node"] - sum(_DB_NUM_NODES)
         )
-        assert int(utils.get_number_of_padding_with_graphs_edges(batch)) == (
+        assert int(get_number_of_padding_with_graphs_edges(batch)) == (
             batch_kwargs["n_edge"] - sum(_DB_NUM_EDGES)
         )
 
@@ -1542,7 +1570,7 @@ def test_dynamically_batch_rejects_graph_larger_than_budget(
 ) -> None:
     rng = np.random.default_rng(42)
     graph_ = _make_dynamic_batch_graph(rng, add_globals=True)
-    iterator = utils.dynamically_batch(iter([graph_]), **batch_kwargs)
+    iterator = dynamically_batch(iter([graph_]), **batch_kwargs)
 
     with pytest.raises(error_type, match=match):
         next(iterator)
@@ -1557,7 +1585,7 @@ def test_dynamically_batch_yields_accumulated_batch_before_error() -> None:
         num_edges=(6, 8),
     )
     oversized_graph = _make_dynamic_batch_graph(rng, add_globals=True)
-    iterator = utils.dynamically_batch(
+    iterator = dynamically_batch(
         iter([small_graph, oversized_graph]),
         n_node=15,
         n_edge=15,
@@ -1572,7 +1600,7 @@ def test_dynamically_batch_yields_accumulated_batch_before_error() -> None:
 def test_dynamically_batch_requires_room_for_padding_graph() -> None:
     rng = np.random.default_rng(42)
     graph_ = _make_dynamic_batch_graph(rng, add_globals=True)
-    iterator = utils.dynamically_batch(
+    iterator = dynamically_batch(
         iter([graph_]),
         n_node=5,
         n_edge=5,
@@ -1589,7 +1617,7 @@ def test_dynamically_batch_requires_room_for_padding_graph() -> None:
 
 
 def _assert_zeroed_padding(
-    padded_graph: graph.GraphsTuple,
+    padded_graph: GraphsTuple,
     *,
     use_wrapper: bool,
 ) -> None:
@@ -1599,15 +1627,15 @@ def _assert_zeroed_padding(
         edges=jax.tree.map(lambda value: value - 1.0, padded_graph.edges),
         globals=jax.tree.map(lambda value: value - 1.0, padded_graph.globals),
     )
-    expected_valid_graph = utils.unbatch(padded_graph)[0]
+    expected_valid_graph = unbatch(padded_graph)[0]
 
     if use_wrapper:
-        zeroing_fn = utils.with_zero_out_padding_outputs(lambda value: value)
+        zeroing_fn = with_zero_out_padding_outputs(lambda value: value)
         zeroed_graph = zeroing_fn(padded_graph)
     else:
-        zeroed_graph = utils.zero_out_padding(padded_graph)
+        zeroed_graph = zero_out_padding(padded_graph)
 
-    valid_graph, *padding_graphs = utils.unbatch(zeroed_graph)
+    valid_graph, *padding_graphs = unbatch(zeroed_graph)
     _assert_tree_array_equal(valid_graph, expected_valid_graph)
 
     for padding_graph in padding_graphs:
@@ -1642,21 +1670,21 @@ def test_zero_out_padding_values(
     current_edges = int(np.asarray(original.n_edge).sum())
 
     if padding_case == "all":
-        padded = utils.pad_with_graphs(
+        padded = pad_with_graphs(
             original,
             n_node=20,
             n_edge=20,
             n_graph=3,
         )
     elif padding_case == "no-edge-padding":
-        padded = utils.pad_with_graphs(
+        padded = pad_with_graphs(
             original,
             n_node=current_nodes + 1,
             n_edge=current_edges,
             n_graph=3,
         )
     else:
-        padded = utils.pad_with_graphs(
+        padded = pad_with_graphs(
             original,
             n_node=current_nodes + 1,
             n_edge=current_edges,
@@ -1670,7 +1698,7 @@ def _sparse_graph_cases() -> list[Any]:
     return [
         pytest.param(
             (np.array([0]), np.array([0]), np.array([2]), np.array([1])),
-            graph.GraphsTuple(
+            GraphsTuple(
                 n_node=jnp.array([1]),
                 n_edge=jnp.array([2]),
                 nodes=None,
@@ -1688,7 +1716,7 @@ def _sparse_graph_cases() -> list[Any]:
                 np.array([1, 1, 1, 1, 1]),
                 np.array(3),
             ),
-            graph.GraphsTuple(
+            GraphsTuple(
                 n_node=jnp.array([3]),
                 n_edge=jnp.array([5]),
                 nodes=None,
@@ -1701,7 +1729,7 @@ def _sparse_graph_cases() -> list[Any]:
         ),
         pytest.param(
             (np.array([]), np.array([]), np.array([]), np.array(1)),
-            graph.GraphsTuple(
+            GraphsTuple(
                 n_node=jnp.array([1]),
                 n_edge=jnp.array([0]),
                 nodes=None,
@@ -1714,7 +1742,7 @@ def _sparse_graph_cases() -> list[Any]:
         ),
         pytest.param(
             (np.array([]), np.array([]), np.array([]), np.array(0)),
-            graph.GraphsTuple(
+            GraphsTuple(
                 n_node=jnp.array([0]),
                 n_edge=jnp.array([0]),
                 nodes=None,
@@ -1727,7 +1755,7 @@ def _sparse_graph_cases() -> list[Any]:
         ),
         pytest.param(
             (np.array([1]), np.array([0]), np.array([1]), np.array(2)),
-            graph.GraphsTuple(
+            GraphsTuple(
                 n_node=jnp.array([2]),
                 n_edge=jnp.array([1]),
                 nodes=None,
@@ -1744,10 +1772,10 @@ def _sparse_graph_cases() -> list[Any]:
 @pytest.mark.parametrize(("sparse_matrix", "expected"), _sparse_graph_cases())
 def test_sparse_matrix_to_graphs_tuple(
     sparse_matrix: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
-    expected: graph.GraphsTuple,
+    expected: GraphsTuple,
 ) -> None:
     senders, receivers, values, n_node = sparse_matrix
-    actual = utils.sparse_matrix_to_graphs_tuple(
+    actual = sparse_matrix_to_graphs_tuple(
         senders,
         receivers,
         values,

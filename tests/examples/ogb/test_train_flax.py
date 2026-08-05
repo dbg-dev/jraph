@@ -16,7 +16,7 @@
 
 from pathlib import Path
 
-from examples.ogb import train_flax
+from examples.ogb.train_flax import train, evaluate
 
 
 def test_train_and_eval_overfit(tmp_path: Path) -> None:
@@ -27,7 +27,7 @@ def test_train_and_eval_overfit(tmp_path: Path) -> None:
     master_csv_path = data_path / "master.csv"
     split_path = data_path / "train.csv.gz"
 
-    train_flax.train(
+    train(
         data_path,
         master_csv_path,
         split_path,
@@ -36,7 +36,7 @@ def test_train_and_eval_overfit(tmp_path: Path) -> None:
         tmp_path,
     )
 
-    _, accuracy = train_flax.evaluate(
+    _, accuracy = evaluate(
         data_path,
         master_csv_path,
         split_path,

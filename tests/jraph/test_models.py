@@ -21,8 +21,17 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from jraph import models, utils
-from jraph.graph import GraphsTuple
+from jraph import (
+    GraphsTuple,
+    GraphNetwork,
+    GraphNetGAT,
+    InteractionNetwork,
+    GraphMapFeatures,
+    RelationNetwork,
+    DeepSets,
+    GAT,
+    segment_sum
+)
 
 
 type GraphApplyFn = Callable[[GraphsTuple], GraphsTuple]
@@ -99,7 +108,7 @@ def _apply_with_expected(
 
 
 def _apply_graph_network(graph: GraphsTuple) -> GraphsTuple:
-    network = models.GraphNetwork(
+    network = GraphNetwork(
         update_edge_fn=_identity_edge_update,
         update_node_fn=_identity_node_update,
         update_global_fn=_identity_global_update,
@@ -110,7 +119,7 @@ def _apply_graph_network(graph: GraphsTuple) -> GraphsTuple:
 def _apply_graph_network_without_global_update(
     graph: GraphsTuple,
 ) -> GraphsTuple:
-    network = models.GraphNetwork(
+    network = GraphNetwork(
         update_edge_fn=_identity_edge_update,
         update_node_fn=_identity_node_update,
         update_global_fn=None,
@@ -121,7 +130,7 @@ def _apply_graph_network_without_global_update(
 def _apply_graph_network_without_node_update(
     graph: GraphsTuple,
 ) -> GraphsTuple:
-    network = models.GraphNetwork(
+    network = GraphNetwork(
         update_edge_fn=_identity_edge_update,
         update_node_fn=None,
         update_global_fn=_identity_global_update,
@@ -132,7 +141,7 @@ def _apply_graph_network_without_node_update(
 def _apply_graph_network_without_edge_update(
     graph: GraphsTuple,
 ) -> GraphsTuple:
-    network = models.GraphNetwork(
+    network = GraphNetwork(
         update_edge_fn=None,
         update_node_fn=_identity_node_update,
         update_global_fn=_identity_global_update,
@@ -141,7 +150,7 @@ def _apply_graph_network_without_edge_update(
 
 
 def _apply_attention_graph_network(graph: GraphsTuple) -> GraphsTuple:
-    network = models.GraphNetwork(
+    network = GraphNetwork(
         update_edge_fn=_identity_edge_update,
         update_node_fn=_identity_node_update,
         update_global_fn=_identity_global_update,
@@ -152,7 +161,7 @@ def _apply_attention_graph_network(graph: GraphsTuple) -> GraphsTuple:
 
 
 def _apply_graph_net_gat(graph: GraphsTuple) -> GraphsTuple:
-    network = models.GraphNetGAT(
+    network = GraphNetGAT(
         update_edge_fn=_identity_edge_update,
         update_node_fn=_identity_node_update,
         attention_logit_fn=_constant_attention_logit,
@@ -190,7 +199,7 @@ def _apply_multi_head_attention_graph_network(
     def attention_reduce_fn(edges: Any, _weights: Any) -> Any:
         return jax.tree.map(lambda leaf: leaf[0], edges)
 
-    network = models.GraphNetwork(
+    network = GraphNetwork(
         update_edge_fn=jax.vmap(update_edge_fn),
         update_node_fn=jax.vmap(_identity_node_update),
         update_global_fn=_identity_global_update,
@@ -216,7 +225,7 @@ def _apply_interaction_network(
             axis=-1,
         )
 
-    actual = models.InteractionNetwork(
+    actual = InteractionNetwork(
         update_edge_fn,
         update_node_fn,
     )(graph)
@@ -230,7 +239,7 @@ def _apply_interaction_network(
         (edges, nodes[senders], nodes[receivers]),
         axis=-1,
     )
-    aggregated_nodes = utils.segment_sum(
+    aggregated_nodes = segment_sum(
         expected_edges,
         receivers,
         num_segments=len(nodes),
@@ -252,7 +261,7 @@ def _apply_graph_map_features(
     def double(value: jax.Array) -> jax.Array:
         return value * 2
 
-    actual = models.GraphMapFeatures(
+    actual = GraphMapFeatures(
         double,
         double,
         double,
@@ -281,7 +290,7 @@ def _apply_relation_network(
     def global_fn(edges: jax.Array) -> jax.Array:
         return edges * 2
 
-    actual = models.RelationNetwork(edge_fn, global_fn)(graph)
+    actual = RelationNetwork(edge_fn, global_fn)(graph)
 
     nodes = cast(jax.Array, graph.nodes)
     edges = cast(jax.Array, graph.edges)
@@ -295,7 +304,7 @@ def _apply_relation_network(
         graph.n_edge,
         total_repeat_length=edges.shape[0],
     )
-    aggregated_edges = utils.segment_sum(
+    aggregated_edges = segment_sum(
         expected_edges,
         edge_graph_indices,
         num_segments=num_graphs,
@@ -316,7 +325,7 @@ def _apply_deep_sets(
     def global_fn(nodes: jax.Array) -> jax.Array:
         return nodes * 2
 
-    actual = models.DeepSets(node_fn, global_fn)(graph)
+    actual = DeepSets(node_fn, global_fn)(graph)
 
     nodes = cast(jax.Array, graph.nodes)
     globals_ = cast(jax.Array, graph.globals)
@@ -339,7 +348,7 @@ def _apply_deep_sets(
     )
     expected = graph._replace(
         nodes=expected_nodes,
-        globals=utils.segment_sum(
+        globals=segment_sum(
             expected_nodes,
             node_graph_indices,
             num_segments=num_graphs,
@@ -372,7 +381,7 @@ def _apply_gat(
     def node_update_fn(nodes: jax.Array) -> jax.Array:
         return jnp.mean(nodes, axis=2)
 
-    network = models.GAT(
+    network = GAT(
         attention_query_fn,
         attention_logit_fn,
         node_update_fn,
@@ -539,7 +548,7 @@ def test_graph_network_requires_complete_attention_configuration(
             r"must both be supplied\."
         ),
     ):
-        models.GraphNetwork(
+        GraphNetwork(
             update_edge_fn=None,
             update_node_fn=None,
             attention_logit_fn=attention_logit_fn,

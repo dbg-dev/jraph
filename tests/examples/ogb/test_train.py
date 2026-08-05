@@ -16,7 +16,7 @@
 
 from pathlib import Path
 
-from examples.ogb import train
+from examples.ogb.train import train, evaluate
 
 
 def test_train_and_eval_overfit(tmp_path: Path) -> None:
@@ -24,7 +24,7 @@ def test_train_and_eval_overfit(tmp_path: Path) -> None:
     master_csv_path = test_data / "master.csv"
     split_path = test_data / "train.csv.gz"
 
-    train.train(
+    train(
         test_data,
         master_csv_path,
         split_path,
@@ -33,7 +33,7 @@ def test_train_and_eval_overfit(tmp_path: Path) -> None:
         tmp_path,
     )
 
-    _, accuracy = train.evaluate(
+    _, accuracy = evaluate(
         test_data,
         master_csv_path,
         split_path,
