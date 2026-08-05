@@ -1,0 +1,114 @@
+"""Tests for examples.zacharys_karate_club."""
+
+import jax
+import numpy as np
+import pytest
+
+from examples.jraph import zacharys_karate_club
+
+
+def test_graph_structure() -> None:
+    graph = zacharys_karate_club.get_zacharys_karate_club()
+
+    np.testing.assert_array_equal(
+        graph.n_node,
+        np.asarray([zacharys_karate_club.NUM_CLUB_MEMBERS]),
+    )
+    np.testing.assert_array_equal(graph.n_edge, np.asarray([156]))
+    assert graph.nodes.shape == (
+        zacharys_karate_club.NUM_CLUB_MEMBERS,
+        zacharys_karate_club.NUM_CLUB_MEMBERS,
+    )
+    assert graph.edges is None
+    assert graph.globals is None
+    assert graph.senders.shape == (156,)
+    assert graph.receivers.shape == (156,)
+
+    edges = set(
+        zip(
+            np.asarray(graph.senders).tolist(),
+            np.asarray(graph.receivers).tolist(),
+            strict=True,
+        )
+    )
+    assert all((receiver, sender) in edges for sender, receiver in edges)
+
+
+def test_ground_truth_assignments() -> None:
+    labels = (
+        zacharys_karate_club
+        .get_ground_truth_assignments_for_zacharys_karate_club()
+    )
+
+    assert labels.shape == (zacharys_karate_club.NUM_CLUB_MEMBERS,)
+    assert set(np.asarray(labels).tolist()) == {0, 1}
+    assert int(labels[0]) == 0
+    assert int(labels[33]) == 1
+
+
+def test_model_output_shape_and_finite_loss() -> None:
+    graph = zacharys_karate_club.get_zacharys_karate_club()
+    network = zacharys_karate_club.build_network()
+    params = network.init(jax.random.PRNGKey(42), graph)
+
+    logits = network.apply(params, graph)
+    loss = zacharys_karate_club.prediction_loss(
+        params,
+        network,
+        graph,
+    )
+
+    assert logits.shape == (
+        zacharys_karate_club.NUM_CLUB_MEMBERS,
+        zacharys_karate_club.NUM_CLASSES,
+    )
+    assert np.isfinite(float(loss))
+
+
+def test_gradients_are_finite() -> None:
+    graph = zacharys_karate_club.get_zacharys_karate_club()
+    network = zacharys_karate_club.build_network()
+    params = network.init(jax.random.PRNGKey(42), graph)
+
+    gradients = jax.grad(
+        lambda current_params: zacharys_karate_club.prediction_loss(
+            current_params,
+            network,
+            graph,
+        )
+    )(params)
+
+    assert all(
+        np.all(np.isfinite(np.asarray(leaf)))
+        for leaf in jax.tree.leaves(gradients)
+    )
+
+
+def test_training_reduces_loss() -> None:
+    result = zacharys_karate_club.train(
+        num_steps=30,
+        seed=42,
+        log_every=None,
+    )
+
+    assert np.isfinite(result.initial_loss)
+    assert np.isfinite(result.final_loss)
+    assert np.isfinite(result.initial_accuracy)
+    assert np.isfinite(result.final_accuracy)
+    assert result.final_loss < result.initial_loss
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"num_steps": -1}, "num_steps must be non-negative"),
+        ({"learning_rate": 0.0}, "learning_rate must be positive"),
+        ({"log_every": 0}, "log_every must be positive or None"),
+    ],
+)
+def test_invalid_training_arguments(
+    kwargs: dict[str, object],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        zacharys_karate_club.train(**kwargs)
