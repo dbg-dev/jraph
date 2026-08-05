@@ -21,8 +21,8 @@ import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
 
-from jraph.graph import GraphsTuple
-from jraph.types import (
+from .graph import GraphsTuple
+from .types import (
     NodeFeatures,
     EdgeFeatures,
     SenderFeatures,
@@ -38,7 +38,7 @@ from jraph.types import (
     GNUpdateGlobalFn,
     GNUpdateNodeFn,
 )
-from jraph.utils import segment_sum, segment_softmax
+from .utils import segment_sum, segment_softmax
 
 
 def GraphNetwork(

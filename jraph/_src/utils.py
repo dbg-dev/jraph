@@ -21,8 +21,8 @@ from jax import lax
 import jax.numpy as jnp
 import jax.tree_util as tree
 import numpy as np
-from jraph.types import ArrayTree
-from jraph.graph import GraphsTuple
+from .types import ArrayTree
+from .graph import GraphsTuple
 
 
 def segment_sum(

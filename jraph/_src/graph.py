@@ -16,7 +16,7 @@
 
 from typing import NamedTuple
 from jax import Array
-from jraph.types import ArrayTree
+from .types import ArrayTree
 
 
 class GraphsTuple(NamedTuple):
