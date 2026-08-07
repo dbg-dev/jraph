@@ -1,12 +1,11 @@
 # Copyright 2020 DeepMind Technologies Limited.
-
-
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-
+#
 # https://www.apache.org/licenses/LICENSE-2.0
-
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,143 +20,379 @@ It goes without saying, but don't use this in a real election!
 Seriously, don't!
 """
 
-import collections
+from collections.abc import Sequence
+from dataclasses import dataclass
 import logging
-import random
+from typing import NamedTuple, cast
 
-from absl import app
-import haiku as hk
+from flax import nnx
 import jax
 import jax.numpy as jnp
 import jraph
 import numpy as np
 import optax
 
-
-Problem = collections.namedtuple("Problem", ("graph", "labels"))
-
-
-def get_voting_problem(min_n_voters: int, max_n_voters: int) -> Problem:
-  """Creates set of one-hot vectors representing a randomly generated election.
-
-  Args:
-    min_n_voters: minimum number of voters in the election.
-    max_n_voters: maximum number of voters in the election.
-
-  Returns:
-    set, one-hot vector encoding the winner.
-  """
-  n_candidates = 20
-  n_voters = random.randint(min_n_voters, max_n_voters)
-  votes = np.random.randint(0, n_candidates, size=(n_voters,))
-  one_hot_votes = np.eye(n_candidates)[votes]
-  winner = np.argmax(np.sum(one_hot_votes, axis=0))
-  one_hot_winner = np.eye(n_candidates)[winner]
-
-  graph = jraph.GraphsTuple(
-      n_node=np.asarray([n_voters]),
-      n_edge=np.asarray([0]),
-      nodes=one_hot_votes,
-      edges=None,
-      globals=np.zeros((1, n_candidates)),
-      # There are no edges in our graph.
-      senders=np.array([], dtype=np.int32),
-      receivers=np.array([], dtype=np.int32))
-
-  # In order to jit compile our code, we have to pad the nodes and edges of
-  # the GraphsTuple to a static shape.
-  graph = jraph.pad_with_graphs(graph, max_n_voters+1, 0)
-
-  return Problem(graph=graph, labels=one_hot_winner)
+from examples.jraph._graphs import pad_with_graphs_as_jax
+from examples.jraph._random import make_random_streams
+from examples.jraph._train import (
+    ClassificationMetrics,
+    eval_step,
+    train_step,
+)
 
 
-def network_definition(
-    graph: jraph.GraphsTuple,
-    num_message_passing_steps: int = 1) -> jraph.ArrayTree:
-  """Defines a graph neural network.
+NUM_CANDIDATES = 20
+TRAIN_DATASET = (2, 15)
+TEST_DATASET = (16, 20)
 
-  Args:
-    graph: Graphstuple the network processes.
-    num_message_passing_steps: number of message passing steps.
 
-  Returns:
-    globals.
-  """
+class Problem(NamedTuple):
+    """A padded election graph and graph-classification targets."""
 
-  @jax.vmap
-  def update_fn(*args):
-    size = args[0].shape[-1]
-    return hk.nets.MLP([size, size])(jnp.concatenate(args, axis=-1))
+    graph: jraph.GraphsTuple
+    labels: jax.Array
+    mask: jax.Array
 
-  for _ in range(num_message_passing_steps):
-    gn = jraph.DeepSets(
-        update_node_fn=update_fn,
-        update_global_fn=update_fn,
-        aggregate_nodes_for_globals_fn=jraph.segment_mean,
+
+@dataclass(frozen=True, slots=True)
+class TrainResult:
+    """Metrics for fixed in-distribution and extrapolation problems."""
+
+    in_distribution: ClassificationMetrics
+    extrapolation: ClassificationMetrics
+
+
+class MLP(nnx.Module):
+    """Two-layer MLP matching the original Haiku update network."""
+
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        *,
+        rngs: nnx.Rngs,
+    ) -> None:
+        self.hidden = nnx.Linear(
+            in_features,
+            out_features,
+            rngs=rngs,
         )
-    graph = gn(graph)
+        self.output = nnx.Linear(
+            out_features,
+            out_features,
+            rngs=rngs,
+        )
 
-  return hk.Linear(graph.globals.shape[-1])(graph.globals)
-
-
-def train(num_steps: int):
-  """Trains a graph neural network on an electronic voting problem."""
-  train_dataset = (2, 15)
-  test_dataset = (16, 20)
-  random.seed(42)
-
-  network = hk.without_apply_rng(hk.transform(network_definition))
-  problem = get_voting_problem(*train_dataset)
-  params = network.init(jax.random.PRNGKey(42), problem.graph)
-
-  @jax.jit
-  def prediction_loss(params, problem):
-    globals_ = network.apply(params, problem.graph)
-    # We interpret the globals as logits for the winner.
-    # Only the first graph is real, the second graph is for padding.
-    log_prob = jax.nn.log_softmax(globals_[0]) * problem.labels
-    return -jnp.sum(log_prob)
-
-  @jax.jit
-  def accuracy_loss(params, problem):
-    globals_ = network.apply(params, problem.graph)
-    # We interpret the globals as logits for the winner.
-    # Only the first graph is real, the second graph is for padding.
-    equal = jnp.argmax(globals_[0]) == jnp.argmax(problem.labels)
-    return equal.astype(np.int32)
-
-  opt_init, opt_update = optax.adam(2e-4)
-  opt_state = opt_init(params)
-
-  @jax.jit
-  def update(params, opt_state, problem):
-    g = jax.grad(prediction_loss)(params, problem)
-    updates, opt_state = opt_update(g, opt_state)
-    return optax.apply_updates(params, updates), opt_state
-
-  for step in range(num_steps):
-    problem = get_voting_problem(*train_dataset)
-    params, opt_state = update(params, opt_state, problem)
-    if step % 1000 == 0:
-      train_loss = jnp.mean(
-          jnp.asarray([
-              accuracy_loss(params, get_voting_problem(*train_dataset))
-              for _ in range(100)
-          ])).item()
-      test_loss = jnp.mean(
-          jnp.asarray([
-              accuracy_loss(params, get_voting_problem(*test_dataset))
-              for _ in range(100)
-          ])).item()
-      logging.info("step %r loss train %r test %r", step, train_loss, test_loss)
+    def __call__(self, features: jax.Array) -> jax.Array:
+        return self.output(jax.nn.relu(self.hidden(features)))
 
 
-def main(argv):
-  if len(argv) > 1:
-    raise app.UsageError("Too many command-line arguments.")
+class DeepSetsBlock(nnx.Module):
+    """One learned node-to-global DeepSets update."""
 
-  train(num_steps=100000)
+    def __init__(
+        self,
+        feature_size: int,
+        *,
+        rngs: nnx.Rngs,
+    ) -> None:
+        self.node_mlp = MLP(
+            2 * feature_size,
+            feature_size,
+            rngs=rngs,
+        )
+        self.global_mlp = MLP(
+            feature_size,
+            feature_size,
+            rngs=rngs,
+        )
+
+    def __call__(
+        self,
+        graph: jraph.GraphsTuple,
+    ) -> jraph.GraphsTuple:
+        def update_nodes(
+            nodes: jax.Array,
+            globals_: jax.Array,
+        ) -> jax.Array:
+            return self.node_mlp(
+                jnp.concatenate((nodes, globals_), axis=-1)
+            )
+
+        def update_globals(
+            aggregated_nodes: jax.Array,
+        ) -> jax.Array:
+            return self.global_mlp(aggregated_nodes)
+
+        return jraph.DeepSets(
+            update_node_fn=update_nodes,
+            update_global_fn=update_globals,
+            aggregate_nodes_for_globals_fn=jraph.segment_mean,
+        )(graph)
+
+
+class VotingModel(nnx.Module):
+    """NNX DeepSets classifier for graph-level election winners."""
+
+    def __init__(
+        self,
+        *,
+        num_message_passing_steps: int = 1,
+        rngs: nnx.Rngs,
+    ) -> None:
+        if num_message_passing_steps < 1:
+            raise ValueError(
+                "num_message_passing_steps must be positive"
+            )
+
+        self.blocks = nnx.List(
+            [
+                DeepSetsBlock(NUM_CANDIDATES, rngs=rngs)
+                for _ in range(num_message_passing_steps)
+            ]
+        )
+        self.decoder = nnx.Linear(
+            NUM_CANDIDATES,
+            NUM_CANDIDATES,
+            rngs=rngs,
+        )
+
+    def __call__(self, graph: jraph.GraphsTuple) -> jax.Array:
+        for block in self.blocks:
+            graph = block(graph)
+
+        globals_ = cast(jax.Array, graph.globals)
+        return self.decoder(globals_)
+
+
+def build_voting_problem(
+    votes: Sequence[int] | np.ndarray,
+    *,
+    max_n_voters: int,
+) -> Problem:
+    """Build a padded voting problem from an explicit sequence of votes."""
+
+    votes_array = np.asarray(votes, dtype=np.int32)
+    if votes_array.ndim != 1:
+        raise ValueError("votes must be a one-dimensional sequence")
+    if votes_array.size < 1:
+        raise ValueError("votes must not be empty")
+    if max_n_voters < votes_array.size:
+        raise ValueError(
+            "max_n_voters must be at least the number of votes"
+        )
+    if np.any(votes_array < 0) or np.any(
+        votes_array >= NUM_CANDIDATES
+    ):
+        raise ValueError(
+            f"votes must be in [0, {NUM_CANDIDATES})"
+        )
+
+    n_voters = int(votes_array.size)
+    one_hot_votes = np.eye(
+        NUM_CANDIDATES,
+        dtype=np.float32,
+    )[votes_array]
+    winner = int(np.argmax(np.sum(one_hot_votes, axis=0)))
+
+    graph = jraph.GraphsTuple(
+        n_node=jnp.asarray([n_voters], dtype=jnp.int32),
+        n_edge=jnp.asarray([0], dtype=jnp.int32),
+        nodes=jnp.asarray(one_hot_votes),
+        edges=None,
+        globals=jnp.zeros(
+            (1, NUM_CANDIDATES),
+            dtype=jnp.float32,
+        ),
+        senders=jnp.asarray([], dtype=jnp.int32),
+        receivers=jnp.asarray([], dtype=jnp.int32),
+    )
+
+    # Add one padding node and one padding graph for a static node shape.
+    graph = pad_with_graphs_as_jax(
+        graph,
+        n_node=max_n_voters + 1,
+        n_edge=0,
+    )
+
+    mask = jraph.get_graph_padding_mask(graph)
+    labels = (
+        jnp.zeros(mask.shape, dtype=jnp.int32)
+        .at[0]
+        .set(winner)
+    )
+    return Problem(graph=graph, labels=labels, mask=mask)
+
+
+def get_voting_problem(
+    min_n_voters: int,
+    max_n_voters: int,
+    *,
+    rng: np.random.Generator,
+) -> Problem:
+    """Create a randomly generated election using an explicit RNG."""
+
+    if min_n_voters < 1:
+        raise ValueError("min_n_voters must be positive")
+    if max_n_voters < min_n_voters:
+        raise ValueError("max_n_voters must be at least min_n_voters")
+
+    n_voters = int(rng.integers(min_n_voters, max_n_voters + 1))
+    votes = rng.integers(
+        0,
+        NUM_CANDIDATES,
+        size=n_voters,
+        dtype=np.int32,
+    )
+    return build_voting_problem(
+        votes,
+        max_n_voters=max_n_voters,
+    )
+
+
+def build_model(
+    *,
+    seed: int = 42,
+    num_message_passing_steps: int = 1,
+) -> VotingModel:
+    """Build the NNX DeepSets voting model."""
+
+    return VotingModel(
+        num_message_passing_steps=num_message_passing_steps,
+        rngs=nnx.Rngs(seed),
+    )
+
+
+def evaluate(
+    model: VotingModel,
+    problems: tuple[Problem, ...],
+) -> ClassificationMetrics:
+    """Evaluate against a fixed collection of generated problems."""
+
+    metrics = [
+        eval_step(
+            model,
+            problem.graph,
+            problem.labels,
+            problem.mask,
+        )
+        for problem in problems
+    ]
+    return ClassificationMetrics(
+        loss=jnp.mean(
+            jnp.asarray([metric.loss for metric in metrics])
+        ),
+        accuracy=jnp.mean(
+            jnp.asarray([metric.accuracy for metric in metrics])
+        ),
+    )
+
+
+def train(
+    num_steps: int,
+    *,
+    seed: int = 42,
+    learning_rate: float = 2e-4,
+    log_every: int | None = 1000,
+    num_eval_problems: int = 100,
+    num_message_passing_steps: int = 1,
+) -> TrainResult:
+    """Train on fresh elections and evaluate on fixed problem sets."""
+
+    if num_steps < 0:
+        raise ValueError("num_steps must be non-negative")
+    if learning_rate <= 0:
+        raise ValueError("learning_rate must be positive")
+    if log_every is not None and log_every < 1:
+        raise ValueError("log_every must be positive or None")
+    if num_eval_problems < 1:
+        raise ValueError("num_eval_problems must be positive")
+
+    streams = make_random_streams(seed)
+
+    in_distribution_problems = tuple(
+        get_voting_problem(
+            *TRAIN_DATASET,
+            rng=streams.in_distribution_evaluation,
+        )
+        for _ in range(num_eval_problems)
+    )
+    extrapolation_problems = tuple(
+        get_voting_problem(
+            *TEST_DATASET,
+            rng=streams.extrapolation_evaluation,
+        )
+        for _ in range(num_eval_problems)
+    )
+
+    model = build_model(
+        seed=seed,
+        num_message_passing_steps=num_message_passing_steps,
+    )
+    optimizer = nnx.Optimizer(
+        model,
+        optax.adam(learning_rate),
+        wrt=nnx.Param,
+    )
+
+    for step in range(num_steps):
+        problem = get_voting_problem(
+            *TRAIN_DATASET,
+            rng=streams.train,
+        )
+        train_step(
+            model,
+            optimizer,
+            problem.graph,
+            problem.labels,
+            problem.mask,
+        )
+
+        if log_every is not None and step % log_every == 0:
+            in_distribution_metrics = evaluate(
+                model,
+                in_distribution_problems,
+            )
+            extrapolation_metrics = evaluate(
+                model,
+                extrapolation_problems,
+            )
+            logging.info(
+                (
+                    "step %d in-distribution accuracy %.4f "
+                    "extrapolation accuracy %.4f"
+                ),
+                step,
+                float(in_distribution_metrics.accuracy),
+                float(extrapolation_metrics.accuracy),
+            )
+
+    return TrainResult(
+        in_distribution=evaluate(
+            model,
+            in_distribution_problems,
+        ),
+        extrapolation=evaluate(
+            model,
+            extrapolation_problems,
+        ),
+    )
+
+
+def main() -> None:
+    """Run the original long training configuration."""
+
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    result = train(num_steps=100_000)
+    logging.info(
+        (
+            "final in-distribution accuracy %.4f "
+            "extrapolation accuracy %.4f"
+        ),
+        float(result.in_distribution.accuracy),
+        float(result.extrapolation.accuracy),
+    )
 
 
 if __name__ == "__main__":
-  app.run(main)
+    main()
