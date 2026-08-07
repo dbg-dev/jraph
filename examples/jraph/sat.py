@@ -24,7 +24,7 @@ from typing import NamedTuple, cast
 from flax import nnx
 import jax
 import jax.numpy as jnp
-import jraph
+from jraph import GraphsTuple, InteractionNetwork
 import numpy as np
 import optax
 
@@ -50,7 +50,7 @@ NUM_MESSAGE_PASSING_STEPS = 5
 class Problem(NamedTuple):
     """A padded SAT graph with literal labels and a supervision mask."""
 
-    graph: jraph.GraphsTuple
+    graph: GraphsTuple
     labels: jax.Array
     mask: jax.Array
 
@@ -119,8 +119,8 @@ class InteractionBlock(nnx.Module):
 
     def __call__(
         self,
-        graph: jraph.GraphsTuple,
-    ) -> jraph.GraphsTuple:
+        graph: GraphsTuple,
+    ) -> GraphsTuple:
         def update_edges(
             edges: jax.Array,
             sender_nodes: jax.Array,
@@ -145,7 +145,7 @@ class InteractionBlock(nnx.Module):
                 )
             )
 
-        return jraph.InteractionNetwork(
+        return InteractionNetwork(
             update_edge_fn=update_edges,
             update_node_fn=update_nodes,
             include_sent_messages_in_node_update=True,
@@ -200,7 +200,7 @@ class SATModel(nnx.Module):
             rngs=rngs,
         )
 
-    def __call__(self, graph: jraph.GraphsTuple) -> jax.Array:
+    def __call__(self, graph: GraphsTuple) -> jax.Array:
         nodes = cast(jax.Array, graph.nodes)
         edges = cast(jax.Array, graph.edges)
 
@@ -256,7 +256,7 @@ def get_2sat_problem(
                 )
             )
 
-    graph = jraph.GraphsTuple(
+    graph = GraphsTuple(
         n_node=jnp.asarray([n_node], dtype=jnp.int32),
         n_edge=jnp.asarray(
             [2 * n_constraints],

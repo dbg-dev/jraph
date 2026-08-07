@@ -24,7 +24,7 @@ from typing import cast
 from flax import nnx
 import jax
 import jax.numpy as jnp
-import jraph
+from jraph import GraphsTuple
 import optax
 
 from examples.pygcn.model import TwoLayerGCN
@@ -47,7 +47,7 @@ class TrainResult:
     final_accuracy: float
 
 
-def get_zacharys_karate_club() -> jraph.GraphsTuple:
+def get_zacharys_karate_club() -> GraphsTuple:
     """Return a ``GraphsTuple`` representing Zachary's karate club."""
 
     social_graph = [
@@ -67,7 +67,7 @@ def get_zacharys_karate_club() -> jraph.GraphsTuple:
     ]
     social_graph += [(receiver, sender) for sender, receiver in social_graph]
 
-    return jraph.GraphsTuple(
+    return GraphsTuple(
         n_node=jnp.asarray([NUM_CLUB_MEMBERS], dtype=jnp.int32),
         n_edge=jnp.asarray([len(social_graph)], dtype=jnp.int32),
         nodes=jnp.eye(NUM_CLUB_MEMBERS, dtype=jnp.float32),
@@ -124,7 +124,7 @@ def build_model(
 
 def node_logits(
     model: TwoLayerGCN,
-    graph: jraph.GraphsTuple,
+    graph: GraphsTuple,
 ) -> jax.Array:
     """Return per-node class logits."""
 

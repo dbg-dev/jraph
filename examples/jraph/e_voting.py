@@ -28,7 +28,7 @@ from typing import NamedTuple, cast
 from flax import nnx
 import jax
 import jax.numpy as jnp
-import jraph
+from jraph import GraphsTuple, DeepSets, segment_mean, get_graph_padding_mask
 import numpy as np
 import optax
 
@@ -49,7 +49,7 @@ TEST_DATASET = (16, 20)
 class Problem(NamedTuple):
     """A padded election graph and graph-classification targets."""
 
-    graph: jraph.GraphsTuple
+    graph: GraphsTuple
     labels: jax.Array
     mask: jax.Array
 
@@ -109,8 +109,8 @@ class DeepSetsBlock(nnx.Module):
 
     def __call__(
         self,
-        graph: jraph.GraphsTuple,
-    ) -> jraph.GraphsTuple:
+        graph: GraphsTuple,
+    ) -> GraphsTuple:
         def update_nodes(
             nodes: jax.Array,
             globals_: jax.Array,
@@ -124,10 +124,10 @@ class DeepSetsBlock(nnx.Module):
         ) -> jax.Array:
             return self.global_mlp(aggregated_nodes)
 
-        return jraph.DeepSets(
+        return DeepSets(
             update_node_fn=update_nodes,
             update_global_fn=update_globals,
-            aggregate_nodes_for_globals_fn=jraph.segment_mean,
+            aggregate_nodes_for_globals_fn=segment_mean,
         )(graph)
 
 
@@ -157,7 +157,7 @@ class VotingModel(nnx.Module):
             rngs=rngs,
         )
 
-    def __call__(self, graph: jraph.GraphsTuple) -> jax.Array:
+    def __call__(self, graph: GraphsTuple) -> jax.Array:
         for block in self.blocks:
             graph = block(graph)
 
@@ -195,7 +195,7 @@ def build_voting_problem(
     )[votes_array]
     winner = int(np.argmax(np.sum(one_hot_votes, axis=0)))
 
-    graph = jraph.GraphsTuple(
+    graph = GraphsTuple(
         n_node=jnp.asarray([n_voters], dtype=jnp.int32),
         n_edge=jnp.asarray([0], dtype=jnp.int32),
         nodes=jnp.asarray(one_hot_votes),
@@ -215,7 +215,7 @@ def build_voting_problem(
         n_edge=0,
     )
 
-    mask = jraph.get_graph_padding_mask(graph)
+    mask = get_graph_padding_mask(graph)
     labels = (
         jnp.zeros(mask.shape, dtype=jnp.int32)
         .at[0]

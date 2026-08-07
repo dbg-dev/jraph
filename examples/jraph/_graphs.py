@@ -4,16 +4,16 @@ from typing import cast
 
 import jax
 import jax.numpy as jnp
-import jraph
+from jraph import GraphsTuple, pad_with_graphs
 
 
 def pad_with_graphs_as_jax(
-    graph: jraph.GraphsTuple,
+    graph: GraphsTuple,
     *,
     n_node: int,
     n_edge: int,
     n_graph: int = 2,
-) -> jraph.GraphsTuple:
+) -> GraphsTuple:
     """Pad a graph and normalize every array leaf back to a JAX array.
 
     ``jraph.pad_with_graphs`` may construct its result with NumPy arrays.
@@ -22,13 +22,13 @@ def pad_with_graphs_as_jax(
     explicitly.
     """
 
-    padded_graph = jraph.pad_with_graphs(
+    padded_graph = pad_with_graphs(
         graph,
         n_node=n_node,
         n_edge=n_edge,
         n_graph=n_graph,
     )
     return cast(
-        jraph.GraphsTuple,
+        GraphsTuple,
         jax.tree.map(jnp.asarray, padded_graph),
     )

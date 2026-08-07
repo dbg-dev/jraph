@@ -5,7 +5,7 @@ from typing import NamedTuple, Protocol, cast
 from flax import nnx
 import jax
 import jax.numpy as jnp
-import jraph
+from jraph import GraphsTuple
 import optax
 
 
@@ -21,7 +21,7 @@ class GraphClassifier(Protocol):
 
     def __call__(
         self,
-        graph: jraph.GraphsTuple,
+        graph: GraphsTuple,
         /,
     ) -> jax.Array:
         """Return classification logits for a graph."""
@@ -61,7 +61,7 @@ def masked_classification_metrics(
 def train_step(
     model: nnx.Module,
     optimizer: nnx.Optimizer,
-    graph: jraph.GraphsTuple,
+    graph: GraphsTuple,
     labels: jax.Array,
     mask: jax.Array,
 ) -> ClassificationMetrics:
@@ -86,7 +86,7 @@ def train_step(
 @nnx.jit
 def eval_step(
     model: nnx.Module,
-    graph: jraph.GraphsTuple,
+    graph: GraphsTuple,
     labels: jax.Array,
     mask: jax.Array,
 ) -> ClassificationMetrics:
