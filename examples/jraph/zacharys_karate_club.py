@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Train a GCN on Zachary's karate club graph.
+"""Train the reusable PyGCN model on Zachary's karate club graph.
 
 The model is supervised only by the known assignments of Mr. Hi (node 0) and
 John A. (node 33), then evaluated against the full club partition.
@@ -19,21 +19,25 @@ John A. (node 33), then evaluated against the full club partition.
 
 from dataclasses import dataclass
 import logging
-from typing import Any
+from typing import cast
 
-import haiku as hk
+from flax import nnx
 import jax
 import jax.numpy as jnp
 import jraph
 import optax
 
+from examples.pygcn.model import TwoLayerGCN
+from examples.pygcn.training import eval_step, train_step
+
 
 NUM_CLUB_MEMBERS = 34
 NUM_CLASSES = 2
+HIDDEN_FEATURES = 5
 SUPERVISED_NODES = (0, 33)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class TrainResult:
     """Summary metrics from a Karate Club training run."""
 
@@ -44,7 +48,7 @@ class TrainResult:
 
 
 def get_zacharys_karate_club() -> jraph.GraphsTuple:
-    """Returns a ``GraphsTuple`` representing Zachary's karate club."""
+    """Return a ``GraphsTuple`` representing Zachary's karate club."""
 
     social_graph = [
         (1, 0), (2, 0), (2, 1), (3, 0), (3, 1), (3, 2),
@@ -81,7 +85,7 @@ def get_zacharys_karate_club() -> jraph.GraphsTuple:
 
 
 def get_ground_truth_assignments_for_zacharys_karate_club() -> jax.Array:
-    """Returns the known two-way partition of the club members."""
+    """Return the known two-way partition of the club members."""
 
     return jnp.asarray(
         [
@@ -92,51 +96,39 @@ def get_ground_truth_assignments_for_zacharys_karate_club() -> jax.Array:
     )
 
 
-def network_definition(graph: jraph.GraphsTuple) -> jax.Array:
-    """Applies the two-layer GCN used in the original example."""
+def get_supervision_mask() -> jax.Array:
+    """Return a mask selecting the two nodes used for training."""
 
-    graph = jraph.GraphConvolution(
-        update_node_fn=hk.Linear(5, with_bias=False),
-        add_self_edges=True,
-    )(graph)
-    graph = graph._replace(nodes=jax.nn.relu(graph.nodes))
-    graph = jraph.GraphConvolution(
-        update_node_fn=hk.Linear(NUM_CLASSES, with_bias=False),
-    )(graph)
-    return graph.nodes
-
-
-def build_network() -> Any:
-    """Returns the transformed Haiku network."""
-
-    return hk.without_apply_rng(hk.transform(network_definition))
-
-
-def prediction_loss(
-    params: hk.Params,
-    network: Any,
-    graph: jraph.GraphsTuple,
-) -> jax.Array:
-    """Returns the loss on the two supervised club members."""
-
-    logits = network.apply(params, graph)
-    log_probabilities = jax.nn.log_softmax(logits)
-    return -(
-        log_probabilities[SUPERVISED_NODES[0], 0]
-        + log_probabilities[SUPERVISED_NODES[1], 1]
+    return (
+        jnp.zeros(NUM_CLUB_MEMBERS, dtype=jnp.bool_)
+        .at[jnp.asarray(SUPERVISED_NODES)]
+        .set(True)
     )
 
 
-def prediction_accuracy(
-    params: hk.Params,
-    network: Any,
-    graph: jraph.GraphsTuple,
-    labels: jax.Array,
-) -> jax.Array:
-    """Returns accuracy against the full known partition."""
+def build_model(
+    *,
+    seed: int = 42,
+    dropout_rate: float = 0.0,
+) -> TwoLayerGCN:
+    """Build the shared two-layer NNX GCN for Karate Club."""
 
-    logits = network.apply(params, graph)
-    return jnp.mean(jnp.argmax(logits, axis=-1) == labels)
+    return TwoLayerGCN(
+        in_features=NUM_CLUB_MEMBERS,
+        hidden_features=HIDDEN_FEATURES,
+        out_features=NUM_CLASSES,
+        dropout_rate=dropout_rate,
+        rngs=nnx.Rngs(seed),
+    )
+
+
+def node_logits(
+    model: TwoLayerGCN,
+    graph: jraph.GraphsTuple,
+) -> jax.Array:
+    """Return per-node class logits."""
+
+    return cast(jax.Array, model(graph).nodes)
 
 
 def train(
@@ -144,75 +136,97 @@ def train(
     num_steps: int = 30,
     seed: int = 42,
     learning_rate: float = 1e-2,
+    dropout_rate: float = 0.0,
     log_every: int | None = 1,
 ) -> TrainResult:
-    """Trains the original Haiku GCN and returns summary metrics."""
+    """Train the shared PyGCN model and return summary metrics."""
 
     if num_steps < 0:
         raise ValueError("num_steps must be non-negative")
     if learning_rate <= 0:
         raise ValueError("learning_rate must be positive")
+    if not 0.0 <= dropout_rate < 1.0:
+        raise ValueError("dropout_rate must be in [0, 1)")
     if log_every is not None and log_every < 1:
         raise ValueError("log_every must be positive or None")
 
     graph = get_zacharys_karate_club()
     labels = get_ground_truth_assignments_for_zacharys_karate_club()
-    network = build_network()
-    params = network.init(jax.random.PRNGKey(seed), graph)
+    supervision_mask = get_supervision_mask()
+    full_mask = jnp.ones(NUM_CLUB_MEMBERS, dtype=jnp.bool_)
 
-    optimizer = optax.adam(learning_rate)
-    opt_state = optimizer.init(params)
+    model = build_model(seed=seed, dropout_rate=dropout_rate)
 
-    def loss_fn(current_params: hk.Params) -> jax.Array:
-        return prediction_loss(current_params, network, graph)
+    # Both views share the same parameters. Training enables dropout while
+    # evaluation disables it.
+    train_model = nnx.view(model, deterministic=False)
+    eval_model = nnx.view(model, deterministic=True)
 
-    @jax.jit
-    def update(
-        current_params: hk.Params,
-        current_opt_state: optax.OptState,
-    ) -> tuple[hk.Params, optax.OptState, jax.Array]:
-        loss, gradients = jax.value_and_grad(loss_fn)(current_params)
-        updates, updated_opt_state = optimizer.update(
-            gradients,
-            current_opt_state,
-            current_params,
-        )
-        updated_params = optax.apply_updates(current_params, updates)
-        return updated_params, updated_opt_state, loss
-
-    accuracy_fn = jax.jit(
-        lambda current_params: prediction_accuracy(
-            current_params,
-            network,
-            graph,
-            labels,
-        )
+    optimizer = nnx.Optimizer(
+        model,
+        optax.adam(learning_rate),
+        wrt=nnx.Param,
     )
 
-    initial_loss = float(loss_fn(params))
-    initial_accuracy = float(accuracy_fn(params))
+    initial_supervised = eval_step(
+        eval_model,
+        graph,
+        labels,
+        supervision_mask,
+    )
+    initial_full = eval_step(
+        eval_model,
+        graph,
+        labels,
+        full_mask,
+    )
 
     for step in range(num_steps):
-        params, opt_state, loss = update(params, opt_state)
+        metrics = train_step(
+            train_model,
+            optimizer,
+            graph,
+            labels,
+            supervision_mask,
+        )
 
         if log_every is not None and step % log_every == 0:
+            full_metrics = eval_step(
+                eval_model,
+                graph,
+                labels,
+                full_mask,
+            )
             logging.info(
                 "step %d loss %.6f accuracy %.4f",
                 step,
-                float(loss),
-                float(accuracy_fn(params)),
+                float(metrics.loss),
+                float(full_metrics.accuracy),
             )
 
+    final_supervised = eval_step(
+        eval_model,
+        graph,
+        labels,
+        supervision_mask,
+    )
+    final_full = eval_step(
+        eval_model,
+        graph,
+        labels,
+        full_mask,
+    )
+
     return TrainResult(
-        initial_loss=initial_loss,
-        final_loss=float(loss_fn(params)),
-        initial_accuracy=initial_accuracy,
-        final_accuracy=float(accuracy_fn(params)),
+        initial_loss=float(initial_supervised.loss),
+        final_loss=float(final_supervised.loss),
+        initial_accuracy=float(initial_full.accuracy),
+        final_accuracy=float(final_full.accuracy),
     )
 
 
 def main() -> None:
-    """Runs the example with its original training length."""
+    """Run the example with the original training length."""
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     result = train()
