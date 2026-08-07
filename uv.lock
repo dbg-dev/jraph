@@ -333,7 +333,6 @@ dependencies = [
 
 [package.optional-dependencies]
 examples = [
-    { name = "absl-py" },
     { name = "dm-haiku" },
     { name = "dm-tree" },
     { name = "frozendict" },
@@ -361,7 +360,6 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "absl-py", marker = "extra == 'examples'", specifier = ">=0.9" },
     { name = "dm-haiku", marker = "extra == 'examples'", specifier = ">=0.0.2" },
     { name = "dm-tree", marker = "extra == 'examples'", specifier = ">=0.1.5" },
     { name = "flax", specifier = ">=0.12.8" },

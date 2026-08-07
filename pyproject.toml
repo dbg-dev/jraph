@@ -41,7 +41,6 @@ dependencies = [
 
 [project.optional-dependencies]
 examples = [
-    "absl-py>=0.9",
     "dm-haiku>=0.0.2",
     "dm-tree>=0.1.5",
     "frozendict>=2.0.2",

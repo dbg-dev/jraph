@@ -37,8 +37,11 @@ Chemical Science, 9(2):513–530, 2018.
 
 Example usage:
 
-python3 train.py --data_path={DATA_PATH} --master_csv_path={MASTER_CSV_PATH} \
---save_dir={SAVE_DIR} --split_path={SPLIT_PATH}
+Example usage:
+
+uv run python train_pmap.py -h 
+
+to get CLI help
 """
 
 import functools
@@ -47,8 +50,8 @@ import pathlib
 import pickle
 from collections.abc import Iterable, Iterator
 
-from absl import app
-from absl import flags
+
+import argparse
 import haiku as hk
 import jax
 import jax.numpy as jnp
@@ -58,19 +61,6 @@ import optax
 
 from examples.ogb import data_utils
 from examples.ogb._training import loss_and_accuracy
-
-
-FLAGS = flags.FLAGS
-
-
-def _define_flags() -> None:
-    flags.DEFINE_string("data_path", None, "Directory of the data.")
-    flags.DEFINE_string("split_path", None, "Path to the data split indices.")
-    flags.DEFINE_string("master_csv_path", None, "Path to OGB master.csv.")
-    flags.DEFINE_string("save_dir", None, "Directory to save parameters to.")
-    flags.DEFINE_integer("batch_size", 1, "Number of graphs in batch.")
-    flags.DEFINE_integer("num_training_steps", 1000, "Number of training steps.")
-    flags.DEFINE_enum("mode", "train", ["train", "evaluate"], "Train or evaluate.")
 
 
 @jraph.concatenated_args
@@ -310,22 +300,72 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
     return loss, accuracy
 
 
-def main(_):
-    if FLAGS.mode == "train":
+def parse_args() -> argparse.Namespace:
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument("--data_path", help="Directory of the data.")
+    common_parser.add_argument(
+        "--split_path",
+        help="Path to the data split indices.",
+    )
+    common_parser.add_argument(
+        "--master_csv_path",
+        help="Path to OGB master.csv.",
+    )
+    common_parser.add_argument(
+        "--save_dir",
+        help="Directory to save parameters to.",
+    )
+
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    train_parser = subparsers.add_parser(
+        "train",
+        parents=[common_parser],
+        help="Train the model.",
+    )
+    train_parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=1,
+        help="Number of graphs in batch.",
+    )
+    train_parser.add_argument(
+        "--num_training_steps",
+        type=int,
+        default=1000,
+        help="Number of training steps.",
+    )
+
+    subparsers.add_parser(
+        "evaluate",
+        parents=[common_parser],
+        help="Evaluate the model.",
+    )
+
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    if args.command == "train":
         train(
-            FLAGS.data_path,
-            FLAGS.master_csv_path,
-            FLAGS.split_path,
-            FLAGS.batch_size,
-            FLAGS.num_training_steps,
-            FLAGS.save_dir,
+            args.data_path,
+            args.master_csv_path,
+            args.split_path,
+            args.batch_size,
+            args.num_training_steps,
+            args.save_dir,
         )
-    elif FLAGS.mode == "evaluate":
-        evaluate(
-            FLAGS.data_path, FLAGS.master_csv_path, FLAGS.split_path, FLAGS.save_dir
+    elif args.command == "evaluate":
+        _ = evaluate(
+            args.data_path,
+            args.master_csv_path,
+            args.split_path,
+            args.save_dir,
         )
 
 
 if __name__ == "__main__":
-    _define_flags()
-    app.run(main)
+    main()
