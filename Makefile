@@ -1,44 +1,48 @@
 UV := uv
+RUN := $(UV) run --extra examples
 
-.PHONY: help sync upgrade test lint format format-check build clean distclean check
-.PHONY: typecheck
-
+.PHONY: help sync upgrade test test-cov lint typecheck format format-check build clean distclean check
 
 help:
 	@printf '%s\n' \
-		'make sync         Install project and test dependencies' \
+		'make sync         Install project, example, and development dependencies' \
 		'make upgrade      Upgrade locked dependencies and resync' \
 		'make test         Run the test suite' \
+		'make test-cov     Run the test suite with coverage' \
 		'make lint         Run Ruff lint checks' \
+		'make typecheck    Run basedpyright' \
 		'make format       Apply Ruff fixes and formatting' \
 		'make format-check Check formatting without changing files' \
 		'make build        Build source and wheel distributions' \
 		'make clean        Remove generated files and caches' \
 		'make distclean    Remove generated files and the virtual environment' \
-		'make check        Run formatting, linting, tests, and build'
+		'make check        Run all repository checks and build'
 
 sync:
-	$(UV) sync --group test
+	$(UV) sync --extra examples
 
 upgrade:
 	$(UV) lock --upgrade
-	$(UV) sync --group test
+	$(UV) sync --extra examples
 
 test:
-	$(UV) run --group test pytest
+	$(RUN) pytest
+
+test-cov:
+	$(RUN) pytest --cov=jraph --cov-report=term-missing
 
 lint:
-	$(UV) run --group test ruff check .
+	$(RUN) ruff check .
 
 typecheck:
-	$(UV) run --group test basedpyright
+	$(RUN) basedpyright
 
 format:
-	$(UV) run --group test ruff check --fix .
-	$(UV) run --group test ruff format .
+	$(RUN) ruff check --fix .
+	$(RUN) ruff format .
 
 format-check:
-	$(UV) run --group test ruff format --check .
+	$(RUN) ruff format --check .
 
 build: clean
 	$(UV) build --no-sources

@@ -33,9 +33,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "flax>=0.12.8",
     "jax>=0.1.55",
-    "jaxlib>=0.1.37",
     "numpy>=1.18.0",
 ]
 
@@ -43,28 +41,21 @@ dependencies = [
 examples = [
     "dm-haiku>=0.0.2",
     "dm-tree>=0.1.5",
+    "flax>=0.12.8",
     "frozendict>=2.0.2",
     "matplotlib>=3.11.1",
     "optax>=0.0.1",
+    "pandas>=3.0.5",
     "scipy>=1.2.1",
 ]
 
 
 [dependency-groups]
 dev = [
-    "pytest>=8",
-]
-test = [
     "basedpyright>=1.39.9",
-    "dm-haiku>=0.0.17",
-    "dm-tree>=0.1.10",
-    "flax>=0.12.8",
-    "jax>=0.10.2",
-    "jaxlib>=0.10.2",
-    "optax>=0.2.8",
-    "pandas>=3.0.5",
-    "pytest>=9.1.1",
+    "pytest>=8",
     "pytest-cov>=7.1.0",
+    "ruff>=0.16.2",
 ]
 
 [project.urls]
