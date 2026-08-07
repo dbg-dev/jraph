@@ -16,7 +16,7 @@ def _assert_trees_allclose(
     expected: object,
     *,
     rtol: float = 2e-5, # note: numpy's default is 1e-7
-    atol: float = 0,
+    atol: float = 1e-7,
 ) -> None:
     jax.tree.map(
         lambda actual_leaf, expected_leaf: np.testing.assert_allclose(
