@@ -43,18 +43,13 @@ dependencies = [
 examples = [
     "absl-py>=0.9",
     "dm-haiku>=0.0.2",
+    "dm-tree>=0.1.5",
     "frozendict>=2.0.2",
+    "matplotlib>=3.11.1",
     "optax>=0.0.1",
     "scipy>=1.2.1",
 ]
 
-ogb_examples = [
-    "absl-py>=0.9",
-    "dm-haiku>=0.0.2",
-    "dm-tree>=0.1.5",
-    "optax>=0.0.1",
-    "pandas>=1.0.5",
-]
 
 [dependency-groups]
 dev = [
