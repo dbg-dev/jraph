@@ -37,7 +37,7 @@ system.
 To implement a learned Hamiltonian Graph Network, one could closely follow
 `hookes_hamiltonian_from_graph_fn` using function approximators (e.g. MLP) in
 `edge_update_fn`, `node_update_fn` and `global_update_fn` that take as inputs
-the concatenated features (e.g. using `jraph.concatenated_args`), with the only
+the concatenated features (e.g. using `concatenated_args`), with the only
 condition that the `global_update_fn` has an output size of 1, to match
 the expected output size for a Hamiltonian. Then the learned Hamiltonian Graph
 Network would be trained by simply adding a loss term in the position / momentum
@@ -51,13 +51,12 @@ use `frozendict`s, which we register with `jax.tree_util`.
 """
 
 import functools
-from typing import Tuple, Callable
+from typing import Callable
 
-from absl import app
 from frozendict import frozendict
 import jax
 import jax.numpy as jnp
-import jraph
+from jraph import GraphsTuple, GraphNetwork
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -70,7 +69,7 @@ jax.tree_util.register_pytree_node(
 
 
 def hookes_hamiltonian_from_graph_fn(
-    graph: jraph.GraphsTuple) -> jraph.GraphsTuple:
+    graph: GraphsTuple) -> GraphsTuple:
   """Computes Hamiltonian of a Hooke's potential system represented in a graph.
 
   While this function hardcodes the Hamiltonian for a Hooke's potential, a
@@ -114,7 +113,7 @@ def hookes_hamiltonian_from_graph_fn(
     hamiltonian_per_graph = nodes["kinetic_energy"] + edges["hookes_potential"]
     return frozendict({"hamiltonian": hamiltonian_per_graph})
 
-  gn = jraph.GraphNetwork(
+  gn = GraphNetwork(
       update_edge_fn=update_edge_fn,
       update_node_fn=update_node_fn,
       update_global_fn=update_global_fn)
@@ -123,7 +122,7 @@ def hookes_hamiltonian_from_graph_fn(
 
 
 # Methods for generating the data.
-def build_hookes_particle_state_graph(num_particles: int) -> jraph.GraphsTuple:
+def build_hookes_particle_state_graph(num_particles: int) -> GraphsTuple:
   """Generates a graph representing a Hooke's system in a random state."""
 
   mass = np.random.uniform(0, 5, [num_particles])
@@ -152,7 +151,7 @@ def build_hookes_particle_state_graph(num_particles: int) -> jraph.GraphsTuple:
   spring_constants = spring_constants[mask]
   num_interactions = receivers.shape[0]
 
-  return jraph.GraphsTuple(
+  return GraphsTuple(
       n_node=np.asarray([num_particles]),
       n_edge=np.asarray([num_interactions]),
       nodes={
@@ -179,7 +178,7 @@ def get_random_uniform_norm2d_vectors(
 
 def get_fully_connected_senders_and_receivers(
     num_particles: int, self_edges: bool = False,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
   """Returns senders and receivers for fully connected particles."""
   particle_indices = np.arange(num_particles)
   senders, receivers = np.meshgrid(particle_indices, particle_indices)
@@ -195,19 +194,19 @@ def get_fully_connected_senders_and_receivers(
 # (position and momentum), and for obtaining the static part of the graph
 # (connectivity and particle parameters: masses, spring constants).
 def set_system_state(
-    static_graph: jraph.GraphsTuple,
+    static_graph: GraphsTuple,
     position: np.ndarray,
-    momentum: np.ndarray) -> jraph.GraphsTuple:
+    momentum: np.ndarray) -> GraphsTuple:
   """Sets the non-static parameters of the graph (momentum, position)."""
-  nodes = static_graph.nodes.copy(position=position, momentum=momentum)
-  return static_graph._replace(nodes=nodes)
+  nodes = dict(static_graph.nodes)
+  nodes.update({"position": position, "momentum": momentum})
+  return static_graph._replace(nodes=frozendict(nodes))
 
-
-def get_system_state(graph: jraph.GraphsTuple) -> Tuple[np.ndarray, np.ndarray]:
+def get_system_state(graph: GraphsTuple) -> tuple[np.ndarray, np.ndarray]:
   return graph.nodes["position"], graph.nodes["momentum"]
 
 
-def get_static_graph(graph: jraph.GraphsTuple) -> jraph.GraphsTuple:
+def get_static_graph(graph: GraphsTuple) -> GraphsTuple:
   """Returns the graph with the static parts of a system only."""
   nodes = dict(graph.nodes)
   del nodes["position"], nodes["momentum"]
@@ -216,8 +215,8 @@ def get_static_graph(graph: jraph.GraphsTuple) -> jraph.GraphsTuple:
 
 # Utility methods to operate with Hamiltonian functions.
 def get_hamiltonian_from_state_fn(
-    static_graph: jraph.GraphsTuple,
-    hamiltonian_from_graph_fn: Callable[[jraph.GraphsTuple], jraph.GraphsTuple],
+    static_graph: GraphsTuple,
+    hamiltonian_from_graph_fn: Callable[[GraphsTuple], GraphsTuple],
     ) -> Callable[[np.ndarray, np.ndarray], float]:
   """Returns fn such that fn(position, momentum) -> scalar Hamiltonian.
 
@@ -245,7 +244,7 @@ def get_hamiltonian_from_state_fn(
 
 def get_state_derivatives_from_hamiltonian_fn(
     hamiltonian_from_state_fn: Callable[[np.ndarray, np.ndarray], float],
-    ) -> Callable[[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]:
+    ) -> Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
   """Returns fn(position, momentum, ...) -> (dposition_dt, dmomentum_dt).
 
   Args:
@@ -263,7 +262,7 @@ def get_state_derivatives_from_hamiltonian_fn(
 
   def state_derivatives_from_hamiltonian_fn(
       position: np.ndarray, momentum: np.ndarray
-      ) -> Tuple[np.ndarray, np.ndarray]:
+      ) -> tuple[np.ndarray, np.ndarray]:
     # Take the derivatives against position and momentum.
     dh_dposition, dh_dmomentum = hamiltonian_gradients_fn(position, momentum)
 
@@ -276,13 +275,13 @@ def get_state_derivatives_from_hamiltonian_fn(
 
 # Implementations of some general purpose integrators for Hamiltonian states.
 StateDerivativesFnType = Callable[
-    [np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]
+    [np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]
 
 
 def abstract_integrator(
     position: np.ndarray, momentum: np.ndarray, time_step: float,
     state_derivatives_fn: StateDerivativesFnType,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
   """Signature of an abstract integrator.
 
   An integrator is a function, that given the the current state, a time step,
@@ -298,7 +297,7 @@ def abstract_integrator(
           position, momentum.
 
   Returns:
-      Tuple with position and momentum at time `t + time_step`.
+      tuple with position and momentum at time `t + time_step`.
 
   """
   raise NotImplementedError("Abstract integrator")
@@ -307,7 +306,7 @@ def abstract_integrator(
 def euler_integrator(
     position: np.ndarray, momentum: np.ndarray, time_step: float,
     state_derivatives_fn: StateDerivativesFnType,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
   """Implementation of an Euler integrator (see `abstract_integrator`)."""
   dposition_dt, dmomentum_dt = state_derivatives_fn(position, momentum)
   next_position = position + dposition_dt * time_step
@@ -318,7 +317,7 @@ def euler_integrator(
 def verlet_integrator(
     position: np.ndarray, momentum: np.ndarray, time_step: float,
     state_derivatives_fn: StateDerivativesFnType,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
   """Implementation of Verlet integrator (see `abstract_integrator`)."""
 
   _, dmomentum_dt = state_derivatives_fn(position, momentum)
@@ -336,15 +335,15 @@ def verlet_integrator(
 # Single graph -> graph integration step.
 IntegratorType = Callable[
     [np.ndarray, np.ndarray, float, StateDerivativesFnType],
-    Tuple[np.ndarray, np.ndarray]
+    tuple[np.ndarray, np.ndarray]
 ]
 
 
 def single_integration_step(
-    graph: jraph.GraphsTuple, time_step: float,
+    graph: GraphsTuple, time_step: float,
     integrator_fn: IntegratorType,
-    hamiltonian_from_graph_fn: Callable[[jraph.GraphsTuple], jraph.GraphsTuple],
-    ) -> Tuple[float, jraph.GraphsTuple]:
+    hamiltonian_from_graph_fn: Callable[[GraphsTuple], GraphsTuple],
+    ) -> tuple[float, GraphsTuple]:
   """Updates a graph state integrating by a single step.
 
   Args:
@@ -387,7 +386,7 @@ def single_integration_step(
   return energy, next_graph
 
 
-def main(_):
+def main() -> None:
 
   # Get a state function and jit it.
   # We could switch to any other Hamiltonian and any other integrator here.
@@ -429,4 +428,4 @@ def main(_):
   plt.show()
 
 if __name__ == "__main__":
-  app.run(main)
+  main()
