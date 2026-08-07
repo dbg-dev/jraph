@@ -1,108 +1,239 @@
 # Copyright 2020 DeepMind Technologies Limited.
-
-
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-
+#
 # https://www.apache.org/licenses/LICENSE-2.0
-
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Implementation of Conway's game of life using jraph."""
+"""Conway's Game of Life implemented as a Jraph ``InteractionNetwork``.
 
+Each cell is represented by a node. Eight directed edges carry the state of
+the neighbouring cells to each receiver node, and an exactly specified MLP
+implements Conway's update rule.
+"""
+
+import argparse
+from collections.abc import Iterable, Sequence
+import math
 import time
 
-from absl import app
-import haiku as hk
 import jax
 import jax.numpy as jnp
-import jraph
+from jraph import GraphsTuple, concatenated_args, InteractionNetwork
 import numpy as np
 
 
-def conway_mlp(x):
-  """Implements a MLP representing Conway's game of life rules."""
-  w = jnp.array([[0.0, -1.0], [0.0, 1.0], [0.0, 1.0],
-                 [0, -1.0], [1.0, 1.0], [1.0, 1.0]])
-  b = jnp.array([3.5, -3.5, -1.5, 1.5, -2.5, -3.5])
-  h = jnp.maximum(jnp.dot(w, x) + b, 0.)
-  w = jnp.array([[2.0, -4.0, 2.0, -4.0, 2.0, -4.0]])
-  b = jnp.array([-4.0])
-  y = jnp.maximum(jnp.dot(w, h) + b, 0.0)
-  return y
+DEFAULT_GLIDER = (
+    (0, 0),
+    (0, 1),
+    (0, 2),
+    (1, 2),
+    (2, 1),
+)
+
+_NEIGHBOUR_OFFSETS = (
+    (-1, -1),
+    (-1, 0),
+    (-1, 1),
+    (0, -1),
+    (0, 1),
+    (1, -1),
+    (1, 0),
+    (1, 1),
+)
 
 
-def conway_graph(size) -> jraph.GraphsTuple:
-  """Returns a graph representing the game field of conway's game of life."""
-  # Creates nodes: each node represents a cell in the game.
-  n_node = size**2
-  nodes = np.zeros((n_node, 1))
-  node_indices = jnp.arange(n_node)
-  # Creates edges, senders and receivers:
-  # the senders represent the connections to the 8 neighboring fields.
-  n_edge = 8 * n_node
-  edges = jnp.zeros((n_edge, 1))
-  senders = jnp.vstack(
-      [node_indices - size - 1, node_indices - size, node_indices - size + 1,
-       node_indices - 1, node_indices + 1,
-       node_indices + size - 1, node_indices + size, node_indices + size + 1])
-  senders = senders.T.reshape(-1)
-  senders = (senders + size**2) % size**2
-  receivers = jnp.repeat(node_indices, 8)
-  # Adds a glider to the game
-  nodes[0, 0] = 1.0
-  nodes[1, 0] = 1.0
-  nodes[2, 0] = 1.0
-  nodes[2 + size, 0] = 1.0
-  nodes[1 + 2 * size, 0] = 1.0
-  return jraph.GraphsTuple(n_node=jnp.array([n_node]),
-                           n_edge=jnp.array([n_edge]),
-                           nodes=jnp.asarray(nodes),
-                           edges=edges,
-                           globals=None,
-                           senders=senders,
-                           receivers=receivers)
+def conway_mlp(features: jax.Array) -> jax.Array:
+    """Applies Conway's update rule using a fixed two-layer ReLU MLP.
+
+    ``features`` contains the current cell state followed by the number of
+    live neighbours. The returned scalar is either zero or one.
+    """
+
+    first_layer_weights = jnp.asarray(
+        [
+            [0.0, -1.0],
+            [0.0, 1.0],
+            [0.0, 1.0],
+            [0.0, -1.0],
+            [1.0, 1.0],
+            [1.0, 1.0],
+        ]
+    )
+    first_layer_bias = jnp.asarray([3.5, -3.5, -1.5, 1.5, -2.5, -3.5])
+
+    hidden = jax.nn.relu(first_layer_weights @ features + first_layer_bias)
+
+    output_weights = jnp.asarray([[2.0, -4.0, 2.0, -4.0, 2.0, -4.0]])
+    output_bias = jnp.asarray([-4.0])
+
+    return jax.nn.relu(output_weights @ hidden + output_bias)
 
 
-def display_graph(graph: jraph.GraphsTuple):
-  """Prints the nodes of the graph representing Conway's game of life."""
-  size = int(np.sqrt(np.sum(graph.n_node)))
+def conway_graph(
+    size: int,
+    *,
+    live_cells: Iterable[tuple[int, int]] = DEFAULT_GLIDER,
+) -> GraphsTuple:
+    """Builds a square, toroidal Game of Life graph.
 
-  def _display_node(node):
-    if node == 1.0:
-      return 'x'
-    else:
-      return ' '
+    Args:
+        size: Width and height of the square board.
+        live_cells: ``(row, column)`` coordinates of initially live cells.
 
-  nodes = graph.nodes.copy()
-  output = '\n'.join(
-      ''.join(_display_node(nodes[i * size + j][0])
-              for j in range(size))
-      for i in range(size))
-  print('-' * size + '\n' + output)
+    Returns:
+        A single-graph ``GraphsTuple`` with one scalar feature per node.
+    """
+
+    if size < 1:
+        raise ValueError("size must be at least 1")
+
+    live_cells = tuple(live_cells)
+    for row, column in live_cells:
+        if not 0 <= row < size or not 0 <= column < size:
+            raise ValueError(
+                f"live cell {(row, column)} is outside a {size}x{size} board"
+            )
+
+    num_nodes = size**2
+    node_indices = np.arange(num_nodes, dtype=np.int32)
+    rows, columns = np.divmod(node_indices, size)
+
+    sender_groups = [
+        ((rows + row_offset) % size) * size
+        + ((columns + column_offset) % size)
+        for row_offset, column_offset in _NEIGHBOUR_OFFSETS
+    ]
+    senders = np.stack(sender_groups, axis=1).reshape(-1)
+    receivers = np.repeat(node_indices, len(_NEIGHBOUR_OFFSETS))
+
+    nodes = np.zeros((num_nodes, 1), dtype=np.float32)
+    for row, column in live_cells:
+        nodes[row * size + column, 0] = 1.0
+
+    num_edges = len(senders)
+    return GraphsTuple(
+        n_node=jnp.asarray([num_nodes], dtype=jnp.int32),
+        n_edge=jnp.asarray([num_edges], dtype=jnp.int32),
+        nodes=jnp.asarray(nodes),
+        edges=jnp.zeros((num_edges, 1), dtype=jnp.float32),
+        globals=None,
+        senders=jnp.asarray(senders),
+        receivers=jnp.asarray(receivers),
+    )
 
 
-def main(_):
+def _update_edge(
+    edge: jax.Array,
+    sender_node: jax.Array,
+    receiver_node: jax.Array,
+) -> jax.Array:
+    del edge, receiver_node
+    return sender_node
 
-  def net_fn(graph: jraph.GraphsTuple):
-    unf = jraph.concatenated_args(conway_mlp)
-    net = jraph.InteractionNetwork(
-        update_edge_fn=lambda e, n_s, n_r: n_s,
-        update_node_fn=jax.vmap(unf))
-    return net(graph)
 
-  net = hk.without_apply_rng(hk.transform(net_fn))
+_UPDATE_NODE = jax.vmap(concatenated_args(conway_mlp))
+_CONWAY_NETWORK = InteractionNetwork(
+    update_edge_fn=_update_edge,
+    update_node_fn=_UPDATE_NODE,
+)
 
-  cg = conway_graph(size=20)
-  params = net.init(jax.random.PRNGKey(42), cg)
-  for _ in range(100):
-    time.sleep(0.05)
-    cg = jax.jit(net.apply)(params, cg)
-    display_graph(cg)
 
-if __name__ == '__main__':
-  app.run(main)
+def step(graph: GraphsTuple) -> GraphsTuple:
+    """Advances a Game of Life graph by one generation."""
+
+    return _CONWAY_NETWORK(graph)
+
+
+def simulate(
+    graph: GraphsTuple,
+    num_steps: int,
+    *,
+    use_jit: bool = True,
+) -> tuple[GraphsTuple, ...]:
+    """Returns the initial graph followed by ``num_steps`` generations."""
+
+    if num_steps < 0:
+        raise ValueError("num_steps must be non-negative")
+
+    step_fn = jax.jit(step) if use_jit else step
+    history = [graph]
+
+    for _ in range(num_steps):
+        graph = step_fn(graph)
+        history.append(graph)
+
+    return tuple(history)
+
+
+def render_graph(graph: GraphsTuple) -> str:
+    """Returns an ASCII representation of a square Game of Life graph."""
+
+    num_nodes = int(np.asarray(graph.n_node).sum())
+    size = math.isqrt(num_nodes)
+    if size * size != num_nodes:
+        raise ValueError("graph does not contain a square number of nodes")
+
+    nodes = np.asarray(graph.nodes).reshape(size, size)
+    rows = [
+        "".join("x" if value == 1.0 else " " for value in row)
+        for row in nodes
+    ]
+    return "-" * size + "\n" + "\n".join(rows)
+
+
+def display_graph(graph: GraphsTuple) -> None:
+    """Prints an ASCII representation of the graph."""
+
+    print(render_graph(graph))
+
+
+def animate(
+    *,
+    size: int = 20,
+    num_steps: int = 100,
+    delay: float = 0.05,
+) -> None:
+    """Runs and displays the default glider simulation."""
+
+    if delay < 0:
+        raise ValueError("delay must be non-negative")
+
+    graph = conway_graph(size)
+    step_fn = jax.jit(step)
+
+    display_graph(graph)
+    for _ in range(num_steps):
+        if delay:
+            time.sleep(delay)
+        graph = step_fn(graph)
+        display_graph(graph)
+
+
+def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--size", type=int, default=20)
+    parser.add_argument("--num-steps", type=int, default=100)
+    parser.add_argument("--delay", type=float, default=0.05)
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    """Runs the animated example from the command line."""
+
+    args = _parse_args(argv)
+    animate(
+        size=args.size,
+        num_steps=args.num_steps,
+        delay=args.delay,
+    )
+
+
+if __name__ == "__main__":
+    main()
