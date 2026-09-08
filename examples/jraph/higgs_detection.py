@@ -35,7 +35,6 @@ import scipy.stats
 from flax import nnx
 
 import jraph
-from examples.jraph._graphs import pad_with_graphs_as_jax
 from examples.jraph._random import make_random_streams
 from examples.jraph._train import (
     ClassificationMetrics,
@@ -274,7 +273,7 @@ def build_higgs_problem(
         receivers=jnp.asarray(receivers),
     )
 
-    graph = pad_with_graphs_as_jax(
+    graph = jraph.pad_with_graphs(
         graph,
         n_node=max_n_photons + 1,
         n_edge=max_n_photons * max_n_photons,

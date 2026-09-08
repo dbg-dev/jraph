@@ -31,14 +31,13 @@ import numpy as np
 import optax
 from flax import nnx
 
-from examples.jraph._graphs import pad_with_graphs_as_jax
 from examples.jraph._random import make_random_streams
 from examples.jraph._train import (
     ClassificationMetrics,
     eval_step,
     train_step,
 )
-from jraph import DeepSets, GraphsTuple, get_graph_padding_mask, segment_mean
+from jraph import DeepSets, GraphsTuple, get_graph_padding_mask, segment_mean, pad_with_graphs
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +199,7 @@ def build_voting_problem(
     )
 
     # Add one padding node and one padding graph for a static node shape.
-    graph = pad_with_graphs_as_jax(
+    graph = pad_with_graphs(
         graph,
         n_node=max_n_voters + 1,
         n_edge=0,

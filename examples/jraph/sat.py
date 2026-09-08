@@ -27,14 +27,13 @@ import numpy as np
 import optax
 from flax import nnx
 
-from examples.jraph._graphs import pad_with_graphs_as_jax
 from examples.jraph._random import make_random_streams
 from examples.jraph._train import (
     ClassificationMetrics,
     eval_step,
     train_step,
 )
-from jraph import GraphsTuple, InteractionNetwork
+from jraph import GraphsTuple, InteractionNetwork, pad_with_graphs
 
 logger = logging.getLogger(__name__)
 
@@ -270,7 +269,7 @@ def get_2sat_problem(
     max_n_constraints = max_n_literals * (max_n_literals - 1) // 2
     max_nodes = max_n_literals + max_n_constraints + 1
     max_edges = 2 * max_n_constraints
-    graph = pad_with_graphs_as_jax(
+    graph = pad_with_graphs(
         graph,
         n_node=max_nodes,
         n_edge=max_edges,

@@ -5,7 +5,6 @@ import jax.numpy as jnp
 import numpy as np
 
 import jraph
-from examples.jraph._graphs import pad_with_graphs_as_jax
 
 
 def test_pad_with_graphs_as_jax_normalizes_array_leaves() -> None:
@@ -19,7 +18,7 @@ def test_pad_with_graphs_as_jax_normalizes_array_leaves() -> None:
         receivers=jnp.asarray([], dtype=jnp.int32),
     )
 
-    padded = pad_with_graphs_as_jax(
+    padded = jraph.pad_with_graphs(
         graph,
         n_node=4,
         n_edge=0,
