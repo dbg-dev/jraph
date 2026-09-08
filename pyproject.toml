@@ -83,3 +83,8 @@ addopts = [
 pythonVersion = "3.14"
 include = ["jraph", "tests"]
 typeCheckingMode = "recommended"
+
+[tool.ruff.lint]
+ignore = [
+    "ARG005",  # Unused lambda argument
+]
