@@ -53,6 +53,7 @@ examples = [
 [dependency-groups]
 dev = [
     "basedpyright>=1.39.9",
+    "pandapower>=3.1.2",
     "pytest>=8",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.2",
