@@ -414,7 +414,7 @@ def main() -> None:
     steps.append(step_i + 1)
 
   # Plot results (positions and energy as a function of time).
-  unused_fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+  _, axes = plt.subplots(1, 2, figsize=(15, 5))
   positions_sequence_array = np.stack(positions_sequence, axis=0)
   axes[0].plot(positions_sequence_array[..., 0],
                positions_sequence_array[..., -1])

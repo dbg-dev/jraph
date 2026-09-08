@@ -16,7 +16,7 @@
 
 import logging
 from collections.abc import Callable, Iterable, Iterator, Mapping
-from typing import TypeVar, cast
+from typing import cast
 
 import jax
 import jax.numpy as jnp
@@ -103,12 +103,10 @@ def loss_and_accuracy(
     return loss, accuracy
 
 
-StateT = TypeVar("StateT")
-
 type StepMetrics = tuple[jax.Array, jax.Array]
 
 
-def run_training(
+def run_training[StateT](
     reader: Iterator[jraph.GraphsTuple],
     state: StateT,
     train_step: Callable[
@@ -135,7 +133,7 @@ def run_training(
     return state
 
 
-def run_evaluation(
+def run_evaluation[StateT](
     reader: Iterable[jraph.GraphsTuple],
     state: StateT,
     eval_step: Callable[

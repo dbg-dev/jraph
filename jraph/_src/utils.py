@@ -569,9 +569,8 @@ def _unbatch(graph: GraphsTuple, np_) -> list[GraphsTuple]:
             n_lists = len(indices_or_sections) + 1
         concat = lambda field: np_.split(field, indices_or_sections)
         nest_of_lists = tree.tree_map(concat, nest)
-        # pylint: disable=cell-var-from-loop
         list_of_nests = [
-            tree.tree_map(lambda _, x: x[i], nest, nest_of_lists)
+            tree.tree_map(lambda _, x, i=i: x[i], nest, nest_of_lists)
             for i in range(n_lists)
         ]
         return list_of_nests
@@ -929,9 +928,13 @@ def get_fully_connected_graph(
             raise ValueError(
                 "Number of nodes is not equal to num_nodes_per_graph * n_graph."
             )
-    if global_features is not None:
-        if n_graph != jax.tree.leaves(global_features)[0].shape[0]:
-            raise ValueError("The number of globals is not equal to n_graph.")
+
+    if (
+        global_features is not None
+        and n_graph != jax.tree.leaves(global_features)[0].shape[0]
+    ):
+        raise ValueError("The number of globals is not equal to n_graph.")
+        
     senders = []
     receivers = []
     n_edge = []
@@ -979,9 +982,9 @@ def _get_graph_size(graphs_tuple: GraphsTuple):
     return n_node, n_edge, n_graph
 
 
-def _is_over_batch_size(graph: GraphsTuple, graph_batch_size: int) -> bool:
+def _is_over_batch_size(graph: GraphsTuple, graph_batch_size: tuple[int, int, int]) -> bool:
     graph_size = _get_graph_size(graph)
-    return any([x > y for x, y in zip(graph_size, graph_batch_size)])
+    return any(x > y for x, y in zip(graph_size, graph_batch_size))
 
 
 def dynamically_batch(
