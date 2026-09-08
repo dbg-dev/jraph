@@ -5,7 +5,7 @@ Thank you for considering a contribution.
 This repository is an independent continuation of the original
 [DeepMind Jraph project](https://github.com/google-deepmind/jraph). The aim is
 to preserve Jraph's small, explicit graph-processing model while keeping it
-usable with current JAX and adding a clear upgrade path to Flax NNX.
+usable with current JAX and providing examples built with current Flax NNX APIs.
 
 ## Project principles
 
@@ -14,7 +14,8 @@ Contributions should generally support one or more of these goals:
 - preserve the existing `GraphsTuple` data model and functional graph utilities;
 - maintain behavioural compatibility with the original Jraph API where practical;
 - support current versions of JAX and Python;
-- add Flax NNX integration without turning Jraph into a larger graph framework;
+- maintain the Flax NNX examples without turning Jraph into a larger graph
+  framework;
 - keep the implementation small, readable, and close to the underlying mathematics.
 
 Large abstractions or broad API redesigns should be discussed in an issue before
@@ -22,32 +23,38 @@ implementation.
 
 ## Development setup
 
-The project uses [uv](https://docs.astral.sh/uv/) for dependency management.
+The project requires Python 3.14 and uses
+[uv](https://docs.astral.sh/uv/) for dependency management.
 
-Clone the repository and create the development environment:
+Clone the repository and create the locked development environment:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/dbg-dev/jraph.git
 cd jraph
-uv sync
+make sync
 ```
 
-Run the core test suite:
+Run the complete repository check before submitting a change:
 
 ```bash
-uv run pytest jraph/_src
+make check
 ```
 
-Build the package:
+This checks formatting, runs Ruff, executes the full test suite, and builds the
+source and wheel distributions. Individual checks are also available:
 
 ```bash
-uv build
+make format-check
+make lint
+make test
+make build
 ```
 
-Before submitting a change, also check for whitespace and merge-marker problems:
+Static type checking is currently advisory while the project establishes a
+useful boundary for JAX and PyTree types:
 
 ```bash
-git diff --check
+make typecheck
 ```
 
 ## Making changes
@@ -63,7 +70,7 @@ When modifying existing behaviour:
 - prefer ordinary JAX transformations and explicit graph operations over hidden
   framework machinery.
 
-When adding NNX support:
+When modifying NNX examples:
 
 - keep graph data and aggregation utilities functional;
 - use NNX for parameterised modules and model state;
@@ -74,10 +81,12 @@ When adding NNX support:
 
 ## Tests
 
-Tests for core library behaviour belong under:
+Tests are organised by responsibility:
 
 ```text
-jraph/_src/
+tests/jraph/               Core library behaviour
+tests/experimental/        Experimental sharding
+tests/examples/            Executable examples
 ```
 
 A contribution should normally include tests for:
@@ -87,14 +96,15 @@ A contribution should normally include tests for:
 - compatibility changes;
 - edge cases introduced by the change.
 
-The core test suite must pass:
+The retained examples form part of the test suite. Changes to shared utilities
+or public APIs should preserve both core-library behaviour and the tested
+example workflows.
+
+Run all required checks with:
 
 ```bash
-uv run pytest jraph/_src
+make check
 ```
-
-Legacy examples may be modernised separately and are not necessarily part of the
-core compatibility baseline.
 
 ## Documentation
 
