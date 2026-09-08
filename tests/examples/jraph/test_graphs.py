@@ -7,7 +7,7 @@ import numpy as np
 import jraph
 
 
-def test_pad_with_graphs_as_jax_normalizes_array_leaves() -> None:
+def test_pad_with_graphs_preserves_jax_array_leaves() -> None:
     graph = jraph.GraphsTuple(
         n_node=jnp.asarray([2], dtype=jnp.int32),
         n_edge=jnp.asarray([0], dtype=jnp.int32),
