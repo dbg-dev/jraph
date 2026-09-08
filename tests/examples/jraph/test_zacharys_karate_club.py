@@ -39,8 +39,7 @@ def test_graph_structure() -> None:
 
 def test_ground_truth_and_supervision_mask() -> None:
     labels = (
-        zacharys_karate_club
-        .get_ground_truth_assignments_for_zacharys_karate_club()
+        zacharys_karate_club.get_ground_truth_assignments_for_zacharys_karate_club()
     )
     mask = zacharys_karate_club.get_supervision_mask()
 
@@ -64,8 +63,7 @@ def test_uses_shared_pygcn_model() -> None:
 def test_model_output_shape_and_finite_loss() -> None:
     graph = zacharys_karate_club.get_zacharys_karate_club()
     labels = (
-        zacharys_karate_club
-        .get_ground_truth_assignments_for_zacharys_karate_club()
+        zacharys_karate_club.get_ground_truth_assignments_for_zacharys_karate_club()
     )
     mask = zacharys_karate_club.get_supervision_mask()
     model = zacharys_karate_club.build_model(seed=42)

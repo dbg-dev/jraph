@@ -68,50 +68,50 @@ from flax import linen as nn
 import jraph
 from examples.ogb import data_utils
 from examples.ogb._training import (
-  loss_and_accuracy,
-  run_evaluation,
-  run_training,
+    loss_and_accuracy,
+    run_evaluation,
+    run_training,
 )
 
 logger = logging.getLogger(__name__)
 
+
 def parse_args() -> argparse.Namespace:
-  parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
 
-  common_parser = argparse.ArgumentParser(add_help=False)
-  common_parser.add_argument("--data_path", help="Directory of the data.")
-  common_parser.add_argument("--split_path", help="Path to the data split indices.")
-  common_parser.add_argument("--master_csv_path", help="Path to OGB master.csv.")
-  common_parser.add_argument("--save_dir", help="Directory to save parameters to.")
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument("--data_path", help="Directory of the data.")
+    common_parser.add_argument("--split_path", help="Path to the data split indices.")
+    common_parser.add_argument("--master_csv_path", help="Path to OGB master.csv.")
+    common_parser.add_argument("--save_dir", help="Directory to save parameters to.")
 
-  subparsers = parser.add_subparsers(dest="mode", required=True)
+    subparsers = parser.add_subparsers(dest="mode", required=True)
 
-  train_parser = subparsers.add_parser(
-      "train",
-      parents=[common_parser],
-      help="Train the model.",
-  )
-  train_parser.add_argument(
-      "--batch_size",
-      type=int,
-      default=1,
-      help="Number of graphs in batch.",
-  )
-  train_parser.add_argument(
-      "--num_training_steps",
-      type=int,
-      default=1000,
-      help="Number of training steps.",
-  )
+    train_parser = subparsers.add_parser(
+        "train",
+        parents=[common_parser],
+        help="Train the model.",
+    )
+    train_parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=1,
+        help="Number of graphs in batch.",
+    )
+    train_parser.add_argument(
+        "--num_training_steps",
+        type=int,
+        default=1000,
+        help="Number of training steps.",
+    )
 
-  subparsers.add_parser(
-      "evaluate",
-      parents=[common_parser],
-      help="Evaluate the model.",
-  )
+    subparsers.add_parser(
+        "evaluate",
+        parents=[common_parser],
+        help="Evaluate the model.",
+    )
 
-  return parser.parse_args()
-
+    return parser.parse_args()
 
 
 class ExplicitMLP(nn.Module):
@@ -300,25 +300,25 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
 
 
 def main() -> None:
-  args = parse_args()
+    args = parse_args()
 
-  if args.mode == "train":
-    train(
-        args.data_path,
-        args.master_csv_path,
-        args.split_path,
-        args.batch_size,
-        args.num_training_steps,
-        args.save_dir,
-    )
-  elif args.mode == "evaluate":
-    _ = evaluate(
-        args.data_path,
-        args.master_csv_path,
-        args.split_path,
-        args.save_dir,
-    ) # logged already
+    if args.mode == "train":
+        train(
+            args.data_path,
+            args.master_csv_path,
+            args.split_path,
+            args.batch_size,
+            args.num_training_steps,
+            args.save_dir,
+        )
+    elif args.mode == "evaluate":
+        _ = evaluate(
+            args.data_path,
+            args.master_csv_path,
+            args.split_path,
+            args.save_dir,
+        )  # logged already
 
 
 if __name__ == "__main__":
-  main()
+    main()

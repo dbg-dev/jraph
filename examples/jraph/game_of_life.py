@@ -106,8 +106,7 @@ def conway_graph(
     rows, columns = np.divmod(node_indices, size)
 
     sender_groups = [
-        ((rows + row_offset) % size) * size
-        + ((columns + column_offset) % size)
+        ((rows + row_offset) % size) * size + ((columns + column_offset) % size)
         for row_offset, column_offset in _NEIGHBOUR_OFFSETS
     ]
     senders = np.stack(sender_groups, axis=1).reshape(-1)
@@ -181,10 +180,7 @@ def render_graph(graph: GraphsTuple) -> str:
         raise ValueError("graph does not contain a square number of nodes")
 
     nodes = np.asarray(graph.nodes).reshape(size, size)
-    rows = [
-        "".join("x" if value == 1.0 else " " for value in row)
-        for row in nodes
-    ]
+    rows = ["".join("x" if value == 1.0 else " " for value in row) for row in nodes]
     return "-" * size + "\n" + "\n".join(rows)
 
 

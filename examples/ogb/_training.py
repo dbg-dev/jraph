@@ -25,6 +25,7 @@ import jraph
 
 logger = logging.getLogger(__name__)
 
+
 def _nearest_bigger_power_of_two(x: int) -> int:
     """Computes the nearest power of two greater than x."""
     y = 2

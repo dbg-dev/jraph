@@ -11,11 +11,12 @@ from examples.jraph import lstm
 def result() -> lstm.LSTMExampleResult:
     return lstm.run(seed=42, num_message_passing_steps=2)
 
+
 def _assert_trees_allclose(
     actual: object,
     expected: object,
     *,
-    rtol: float = 2e-5, # note: numpy's default is 1e-7
+    rtol: float = 2e-5,  # note: numpy's default is 1e-7
     atol: float = 1e-7,
 ) -> None:
     jax.tree.map(

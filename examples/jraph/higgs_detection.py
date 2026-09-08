@@ -118,10 +118,7 @@ def unused_update_edge_fn_solution(
 
     t = (s + r) ** 2
     return jnp.array(
-        jnp.abs(
-            t[0] - t[1] - t[2] - t[3] - HIGGS_MASS_GEV**2
-        )
-        < 1,
+        jnp.abs(t[0] - t[1] - t[2] - t[3] - HIGGS_MASS_GEV**2) < 1,
         dtype=jnp.float32,
     )[None]
 
@@ -194,21 +191,29 @@ def get_random_higgs_photons(
 
     boost = get_random_boost_matrix(rng)
     rotation = get_random_rotation_matrix(rng)
-    photon1 = boost @ rotation @ np.asarray(
-        [
-            HIGGS_MASS_GEV / 2,
-            HIGGS_MASS_GEV / 2,
-            0.0,
-            0.0,
-        ]
+    photon1 = (
+        boost
+        @ rotation
+        @ np.asarray(
+            [
+                HIGGS_MASS_GEV / 2,
+                HIGGS_MASS_GEV / 2,
+                0.0,
+                0.0,
+            ]
+        )
     )
-    photon2 = boost @ rotation @ np.asarray(
-        [
-            HIGGS_MASS_GEV / 2,
-            -HIGGS_MASS_GEV / 2,
-            0.0,
-            0.0,
-        ]
+    photon2 = (
+        boost
+        @ rotation
+        @ np.asarray(
+            [
+                HIGGS_MASS_GEV / 2,
+                -HIGGS_MASS_GEV / 2,
+                0.0,
+                0.0,
+            ]
+        )
     )
     return photon1, photon2
 
@@ -221,18 +226,13 @@ def get_random_background_photon(
     boost = get_random_boost_matrix(rng)
     rotation = get_random_rotation_matrix(rng)
     energy = float(rng.uniform(20.0, 120.0))
-    return boost @ rotation @ np.asarray(
-        [energy, energy, 0.0, 0.0]
-    )
+    return boost @ rotation @ np.asarray([energy, energy, 0.0, 0.0])
 
 
 def invariant_mass_squared(four_momentum: np.ndarray) -> float:
     """Return E^2 - |p|^2 for a four-momentum."""
 
-    return float(
-        four_momentum[0] ** 2
-        - np.sum(four_momentum[1:] ** 2)
-    )
+    return float(four_momentum[0] ** 2 - np.sum(four_momentum[1:] ** 2))
 
 
 def build_higgs_problem(
@@ -245,17 +245,13 @@ def build_higgs_problem(
 
     photons = np.asarray(photons)
     if photons.ndim != 2 or photons.shape[1] != PHOTON_FEATURES:
-        raise ValueError(
-            "photons must have shape (n_photons, PHOTON_FEATURES)"
-        )
+        raise ValueError("photons must have shape (n_photons, PHOTON_FEATURES)")
 
     n_photons = photons.shape[0]
     if n_photons < 2:
         raise ValueError("at least two photons are required")
     if max_n_photons < n_photons:
-        raise ValueError(
-            "max_n_photons must be at least the number of photons"
-        )
+        raise ValueError("max_n_photons must be at least the number of photons")
     if label not in (HIGGS_LABEL, BACKGROUND_LABEL):
         raise ValueError("label must be HIGGS_LABEL or BACKGROUND_LABEL")
 
@@ -306,19 +302,10 @@ def get_higgs_problem(
     if min_n_photons < 2:
         raise ValueError("min_n_photons must be at least 2")
     if max_n_photons < min_n_photons:
-        raise ValueError(
-            "max_n_photons must be at least min_n_photons"
-        )
+        raise ValueError("max_n_photons must be at least min_n_photons")
 
-    n_photons = int(
-        rng.integers(min_n_photons, max_n_photons + 1)
-    )
-    photons = np.stack(
-        [
-            get_random_background_photon(rng)
-            for _ in range(n_photons)
-        ]
-    )
+    n_photons = int(rng.integers(min_n_photons, max_n_photons + 1))
+    photons = np.stack([get_random_background_photon(rng) for _ in range(n_photons)])
 
     if rng.random() > 0.5:
         label = HIGGS_LABEL
@@ -355,12 +342,8 @@ def evaluate(
         for problem in problems
     ]
     return ClassificationMetrics(
-        loss=jnp.mean(
-            jnp.asarray([metric.loss for metric in metrics])
-        ),
-        accuracy=jnp.mean(
-            jnp.asarray([metric.accuracy for metric in metrics])
-        ),
+        loss=jnp.mean(jnp.asarray([metric.loss for metric in metrics])),
+        accuracy=jnp.mean(jnp.asarray([metric.accuracy for metric in metrics])),
     )
 
 

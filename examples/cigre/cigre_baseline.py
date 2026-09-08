@@ -156,9 +156,7 @@ def load_dataset(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         converged = data["converged"].astype(bool)
         load_scaling = data["load_scaling"].astype(np.float64)
         sgen_scaling = data["sgen_scaling"].astype(np.float64)
-        y = np.column_stack(
-            [data[name].astype(np.float64) for name in TARGET_NAMES]
-        )
+        y = np.column_stack([data[name].astype(np.float64) for name in TARGET_NAMES])
 
     valid = converged & np.all(np.isfinite(y), axis=1)
     x = reconstruct_aggregate_features(
@@ -325,11 +323,7 @@ def train_mlp(
         else:
             checks_without_improvement += 1
 
-        if (
-            step == eval_every
-            or step % 500 == 0
-            or step == max_steps
-        ):
+        if step == eval_every or step % 500 == 0 or step == max_steps:
             print(
                 f"MLP step {step:4d}: "
                 f"train MSE={float(train_loss):.6f}, "
@@ -340,10 +334,7 @@ def train_mlp(
             print(f"MLP early stopping at step {step}")
             break
 
-    print(
-        f"Best validation MSE={best_validation_loss:.6f} "
-        f"at step {best_step}"
-    )
+    print(f"Best validation MSE={best_validation_loss:.6f} at step {best_step}")
     return best_params
 
 
@@ -354,13 +345,7 @@ def print_metrics_table(
     predictions: dict[str, np.ndarray],
 ) -> None:
     print(f"\n{title}")
-    print(
-        f"{'target':33s}"
-        f"{'model':10s}"
-        f"{'MAE':>12s}"
-        f"{'RMSE':>12s}"
-        f"{'R^2':>12s}"
-    )
+    print(f"{'target':33s}{'model':10s}{'MAE':>12s}{'RMSE':>12s}{'R^2':>12s}")
     print("-" * 79)
 
     for index, label in enumerate(TARGET_LABELS):

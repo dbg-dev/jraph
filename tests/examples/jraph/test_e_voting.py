@@ -42,7 +42,6 @@ def _clear_winner_problems() -> tuple[e_voting.Problem, ...]:
     )
 
 
-
 def test_padded_problem_contains_jax_arrays() -> None:
     problem = _problem()
 
@@ -52,6 +51,7 @@ def test_padded_problem_contains_jax_arrays() -> None:
     assert all(isinstance(leaf, jax.Array) for leaf in leaves)
     assert isinstance(problem.labels, jax.Array)
     assert isinstance(problem.mask, jax.Array)
+
 
 def test_model_output_shape() -> None:
     problem = _problem()
@@ -74,10 +74,7 @@ def test_model_uses_independent_deepsets_blocks() -> None:
     assert isinstance(model, e_voting.VotingModel)
     assert len(model.blocks) == 2
     assert model.blocks[0] is not model.blocks[1]
-    assert (
-        model.blocks[0].node_mlp
-        is not model.blocks[0].global_mlp
-    )
+    assert model.blocks[0].node_mlp is not model.blocks[0].global_mlp
 
 
 def test_voter_permutation_does_not_change_prediction() -> None:
@@ -90,9 +87,7 @@ def test_voter_permutation_does_not_change_prediction() -> None:
     n_voters = int(np.asarray(problem.graph.n_node)[0])
     permutation = jnp.asarray([4, 1, 5, 0, 3, 2])
     nodes = cast(jax.Array, problem.graph.nodes)
-    permuted_nodes = nodes.at[:n_voters].set(
-        nodes[:n_voters][permutation]
-    )
+    permuted_nodes = nodes.at[:n_voters].set(nodes[:n_voters][permutation])
     permuted_graph = problem.graph._replace(nodes=permuted_nodes)
 
     original_logits = model(problem.graph)[0]
@@ -154,9 +149,7 @@ def test_eager_and_nnx_jit_match() -> None:
     model = e_voting.build_model(seed=42)
 
     eager = model(problem.graph)
-    jitted_call = nnx.jit(
-        lambda current_model, graph: current_model(graph)
-    )
+    jitted_call = nnx.jit(lambda current_model, graph: current_model(graph))
     jitted = jitted_call(model, problem.graph)
 
     np.testing.assert_allclose(
@@ -258,9 +251,7 @@ def test_logging_frequency_does_not_change_training() -> None:
     ("call", "message"),
     [
         (
-            lambda: e_voting.build_model(
-                num_message_passing_steps=0
-            ),
+            lambda: e_voting.build_model(num_message_passing_steps=0),
             "num_message_passing_steps must be positive",
         ),
         (

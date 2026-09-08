@@ -410,10 +410,8 @@ def GraphNetGAT(
     """
     if (attention_logit_fn is None) or (attention_reduce_fn is None):
         raise ValueError(
-            
-                "`None` value not supported for `attention_logit_fn` or "
-                "`attention_reduce_fn` in a Graph Attention network."
-            
+            "`None` value not supported for `attention_logit_fn` or "
+            "`attention_reduce_fn` in a Graph Attention network."
         )
 
     return GraphNetwork(

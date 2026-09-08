@@ -76,16 +76,13 @@ class Standardizer:
 
     def transform(self, x: np.ndarray | jax.Array) -> jax.Array:
         return (
-            jnp.asarray(x, dtype=jnp.float32)
-            - jnp.asarray(self.mean)
+            jnp.asarray(x, dtype=jnp.float32) - jnp.asarray(self.mean)
         ) / jnp.asarray(self.scale)
 
     def inverse_transform(self, x: np.ndarray | jax.Array) -> jax.Array:
-        return (
-            jnp.asarray(x, dtype=jnp.float32)
-            * jnp.asarray(self.scale)
-            + jnp.asarray(self.mean)
-        )
+        return jnp.asarray(x, dtype=jnp.float32) * jnp.asarray(
+            self.scale
+        ) + jnp.asarray(self.mean)
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,8 +119,7 @@ class CigreGraphDataset:
             missing = required.difference(data.files)
             if missing:
                 raise KeyError(
-                    "Dataset is missing required arrays: "
-                    + ", ".join(sorted(missing))
+                    "Dataset is missing required arrays: " + ", ".join(sorted(missing))
                 )
 
             day = np.asarray(data["day"], dtype=np.int64)
@@ -131,10 +127,7 @@ class CigreGraphDataset:
             p_net_mw = np.asarray(data["p_net_mw"], dtype=np.float32)
             q_net_mvar = np.asarray(data["q_net_mvar"], dtype=np.float32)
             targets = np.column_stack(
-                [
-                    np.asarray(data[name], dtype=np.float32)
-                    for name in TARGET_NAMES
-                ]
+                [np.asarray(data[name], dtype=np.float32) for name in TARGET_NAMES]
             )
 
         valid = (
@@ -159,9 +152,7 @@ class CigreGraphDataset:
 
         self._split_indices = {
             "train": np.flatnonzero(self.day < 40),
-            "validation": np.flatnonzero(
-                (self.day >= 40) & (self.day < 50)
-            ),
+            "validation": np.flatnonzero((self.day >= 40) & (self.day < 50)),
             "test": np.flatnonzero(self.day >= 50),
         }
 
@@ -245,9 +236,7 @@ class CigreGraphDataset:
         scaled_physical_edges = self.scalers.edge_physical.transform(
             edges[:, EDGE_CONTINUOUS_COLUMNS]
         )
-        edges = edges.at[:, EDGE_CONTINUOUS_COLUMNS].set(
-            scaled_physical_edges
-        )
+        edges = edges.at[:, EDGE_CONTINUOUS_COLUMNS].set(scaled_physical_edges)
 
         return raw._replace(
             nodes=nodes,
@@ -275,15 +264,11 @@ class CigreGraphDataset:
         self,
         target_standardized: np.ndarray | jax.Array,
     ) -> jax.Array:
-        return self.scalers.target.inverse_transform(
-            target_standardized
-        )
+        return self.scalers.target.inverse_transform(target_standardized)
 
     def _check_index(self, index: int) -> None:
         if not 0 <= index < len(self):
-            raise IndexError(
-                f"index {index} outside [0, {len(self)})"
-            )
+            raise IndexError(f"index {index} outside [0, {len(self)})")
 
 
 def parse_args() -> argparse.Namespace:
@@ -315,18 +300,11 @@ def _training_standardization_check(
     node_power = []
     for index in train:
         graph = dataset.graph(int(index))
-        node_power.append(
-            np.asarray(graph.nodes)[:, NODE_CONTINUOUS_COLUMNS]
-        )
+        node_power.append(np.asarray(graph.nodes)[:, NODE_CONTINUOUS_COLUMNS])
     node_power_array = np.concatenate(node_power, axis=0)
 
     edge_array = np.asarray(dataset.graph(int(train[0])).edges)
-    target_array = np.asarray(
-        [
-            dataset.sample(int(index)).target
-            for index in train
-        ]
-    )
+    target_array = np.asarray([dataset.sample(int(index)).target for index in train])
 
     print("\nStandardization checks")
     print(
@@ -360,12 +338,8 @@ def _training_standardization_check(
         np.std(target_array, axis=0),
     )
 
-    node_binary = np.unique(
-        np.asarray(dataset.graph(int(train[0])).nodes)[:, 2]
-    )
-    edge_binary = np.unique(
-        np.asarray(dataset.graph(int(train[0])).edges)[:, 3]
-    )
+    node_binary = np.unique(np.asarray(dataset.graph(int(train[0])).nodes)[:, 2])
+    edge_binary = np.unique(np.asarray(dataset.graph(int(train[0])).edges)[:, 3])
     print("  is_slack values:    ", node_binary)
     print("  is_transformer vals:", edge_binary)
 
@@ -402,10 +376,7 @@ def main() -> None:
     raw = dataset.raw_graph(args.index)
 
     print(f"\nSample {args.index}")
-    print(
-        f"  source index={sample.source_index}, "
-        f"day={sample.day}"
-    )
+    print(f"  source index={sample.source_index}, day={sample.day}")
     print("  raw node[0]:   ", np.asarray(raw.nodes[0]))
     print("  scaled node[0]:", np.asarray(sample.graph.nodes[0]))
     print("  raw edge[0]:   ", np.asarray(raw.edges[0]))

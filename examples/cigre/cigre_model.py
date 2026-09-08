@@ -265,12 +265,7 @@ def loss_fn(
 def count_parameters(model: nnx.Module) -> int:
     state = nnx.state(model, nnx.Param)
     leaves = jax.tree.leaves(state)
-    return int(
-        sum(
-            np.prod(np.asarray(leaf).shape)
-            for leaf in leaves
-        )
-    )
+    return int(sum(np.prod(np.asarray(leaf).shape) for leaf in leaves))
 
 
 def parse_args() -> argparse.Namespace:
@@ -301,12 +296,8 @@ def main() -> None:
     eager_prediction = model(sample.graph)
     compiled_prediction = predict(model, sample.graph)
 
-    eager_physical = dataset.inverse_target(
-        eager_prediction[0]
-    )
-    compiled_physical = dataset.inverse_target(
-        compiled_prediction[0]
-    )
+    eager_physical = dataset.inverse_target(eager_prediction[0])
+    compiled_physical = dataset.inverse_target(compiled_prediction[0])
 
     loss, grads = nnx.value_and_grad(loss_fn)(
         model,
@@ -315,10 +306,7 @@ def main() -> None:
     )
 
     grad_leaves = jax.tree.leaves(grads)
-    gradients_finite = all(
-        bool(jnp.all(jnp.isfinite(leaf)))
-        for leaf in grad_leaves
-    )
+    gradients_finite = all(bool(jnp.all(jnp.isfinite(leaf))) for leaf in grad_leaves)
 
     print(f"Sample index:       {args.index}")
     print(f"Latent size:        {args.latent_size}")

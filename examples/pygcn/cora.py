@@ -81,10 +81,7 @@ def _encode_labels(
     labels: np.ndarray,
 ) -> tuple[np.ndarray, tuple[str, ...]]:
     class_names = tuple(sorted(np.unique(labels).tolist()))
-    class_indices = {
-        class_name: index
-        for index, class_name in enumerate(class_names)
-    }
+    class_indices = {class_name: index for index, class_name in enumerate(class_names)}
 
     encoded = np.fromiter(
         (class_indices[label] for label in labels),
@@ -99,10 +96,7 @@ def _convert_edges(
     node_ids: np.ndarray,
     citations: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    id_to_index = {
-        int(node_id): index
-        for index, node_id in enumerate(node_ids)
-    }
+    id_to_index = {int(node_id): index for index, node_id in enumerate(node_ids)}
 
     unknown_ids = set(citations.ravel()) - set(id_to_index)
 

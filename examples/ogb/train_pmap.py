@@ -39,7 +39,7 @@ Example usage:
 
 Example usage:
 
-uv run python train_pmap.py -h 
+uv run python train_pmap.py -h
 
 to get CLI help
 """
@@ -62,6 +62,7 @@ from examples.ogb import data_utils
 from examples.ogb._training import loss_and_accuracy
 
 logger = logging.getLogger(__name__)
+
 
 @jraph.concatenated_args
 def edge_update_fn(feats: jnp.ndarray) -> jnp.ndarray:

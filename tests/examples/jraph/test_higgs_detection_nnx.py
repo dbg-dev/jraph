@@ -21,10 +21,7 @@ def _background_photons(
 ) -> np.ndarray:
     rng = np.random.default_rng(seed)
     return np.stack(
-        [
-            higgs_detection.get_random_background_photon(rng)
-            for _ in range(n_photons)
-        ]
+        [higgs_detection.get_random_background_photon(rng) for _ in range(n_photons)]
     )
 
 
@@ -65,9 +62,7 @@ def test_builder_preserves_explicit_label() -> None:
         max_n_photons=6,
     )
 
-    assert int(problem.labels[0]) == (
-        higgs_detection.BACKGROUND_LABEL
-    )
+    assert int(problem.labels[0]) == (higgs_detection.BACKGROUND_LABEL)
     np.testing.assert_array_equal(
         problem.mask,
         jraph.get_graph_padding_mask(problem.graph),
@@ -97,9 +92,7 @@ def test_higgs_pair_has_expected_invariant_mass() -> None:
         np.random.default_rng(42)
     )
 
-    mass_squared = higgs_detection.invariant_mass_squared(
-        photon1 + photon2
-    )
+    mass_squared = higgs_detection.invariant_mass_squared(photon1 + photon2)
 
     np.testing.assert_allclose(
         mass_squared,
@@ -110,9 +103,7 @@ def test_higgs_pair_has_expected_invariant_mass() -> None:
 
 
 def test_background_photon_is_massless() -> None:
-    photon = higgs_detection.get_random_background_photon(
-        np.random.default_rng(42)
-    )
+    photon = higgs_detection.get_random_background_photon(np.random.default_rng(42))
 
     mass_squared = higgs_detection.invariant_mass_squared(photon)
 
@@ -156,9 +147,7 @@ def test_eager_and_nnx_jit_match() -> None:
     model = higgs_detection.build_model(seed=42)
 
     eager = model(problem.graph)
-    jitted_call = nnx.jit(
-        lambda current_model, graph: current_model(graph)
-    )
+    jitted_call = nnx.jit(lambda current_model, graph: current_model(graph))
     jitted = jitted_call(model, problem.graph)
 
     np.testing.assert_allclose(
@@ -220,9 +209,7 @@ def test_padding_graph_does_not_affect_real_graph_logits() -> None:
     nodes = cast(jax.Array, problem.graph.nodes)
     n_real_nodes = int(problem.graph.n_node[0])
     changed_graph = problem.graph._replace(
-        nodes=nodes.at[n_real_nodes:].set(
-            jnp.full_like(nodes[n_real_nodes:], 1_000.0)
-        )
+        nodes=nodes.at[n_real_nodes:].set(jnp.full_like(nodes[n_real_nodes:], 1_000.0))
     )
 
     original_logits = model(problem.graph)

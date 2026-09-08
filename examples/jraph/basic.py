@@ -60,9 +60,7 @@ class BasicExampleResult:
     jitted_updated_padded_graph: GraphsTuple
 
 
-def _build_identity_graph_network() -> Callable[
-    [GraphsTuple], GraphsTuple
-]:
+def _build_identity_graph_network() -> Callable[[GraphsTuple], GraphsTuple]:
     """Builds a ``GraphNetwork`` whose update functions preserve all features."""
 
     def update_edge_fn(

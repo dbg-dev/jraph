@@ -26,8 +26,7 @@ def test_conway_mlp_matches_rule(
     )
 
     expected = float(
-        live_neighbours == 3
-        or (current_state == 1.0 and live_neighbours == 2)
+        live_neighbours == 3 or (current_state == 1.0 and live_neighbours == 2)
     )
     np.testing.assert_array_equal(result, np.asarray([expected]))
 

@@ -25,9 +25,7 @@ def _graph() -> jraph.GraphsTuple:
     return jraph.GraphsTuple(
         n_node=jnp.asarray([4], dtype=jnp.int32),
         n_edge=jnp.asarray([0], dtype=jnp.int32),
-        nodes=jnp.asarray(
-            [[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]]
-        ),
+        nodes=jnp.asarray([[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]]),
         edges=None,
         globals=None,
         senders=jnp.asarray([], dtype=jnp.int32),
@@ -36,9 +34,7 @@ def _graph() -> jraph.GraphsTuple:
 
 
 def test_masked_classification_metrics() -> None:
-    logits = jnp.asarray(
-        [[3.0, 0.0], [0.0, 3.0], [0.0, 3.0]]
-    )
+    logits = jnp.asarray([[3.0, 0.0], [0.0, 3.0], [0.0, 3.0]])
     labels = jnp.asarray([0, 1, 0], dtype=jnp.int32)
     mask = jnp.asarray([True, True, False])
 

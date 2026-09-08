@@ -116,9 +116,7 @@ class DeepSetsBlock(nnx.Module):
             nodes: jax.Array,
             globals_: jax.Array,
         ) -> jax.Array:
-            return self.node_mlp(
-                jnp.concatenate((nodes, globals_), axis=-1)
-            )
+            return self.node_mlp(jnp.concatenate((nodes, globals_), axis=-1))
 
         def update_globals(
             aggregated_nodes: jax.Array,
@@ -142,9 +140,7 @@ class VotingModel(nnx.Module):
         rngs: nnx.Rngs,
     ) -> None:
         if num_message_passing_steps < 1:
-            raise ValueError(
-                "num_message_passing_steps must be positive"
-            )
+            raise ValueError("num_message_passing_steps must be positive")
 
         self.blocks = nnx.List(
             [
@@ -179,15 +175,9 @@ def build_voting_problem(
     if votes_array.size < 1:
         raise ValueError("votes must not be empty")
     if max_n_voters < votes_array.size:
-        raise ValueError(
-            "max_n_voters must be at least the number of votes"
-        )
-    if np.any(votes_array < 0) or np.any(
-        votes_array >= NUM_CANDIDATES
-    ):
-        raise ValueError(
-            f"votes must be in [0, {NUM_CANDIDATES})"
-        )
+        raise ValueError("max_n_voters must be at least the number of votes")
+    if np.any(votes_array < 0) or np.any(votes_array >= NUM_CANDIDATES):
+        raise ValueError(f"votes must be in [0, {NUM_CANDIDATES})")
 
     n_voters = int(votes_array.size)
     one_hot_votes = np.eye(
@@ -217,11 +207,7 @@ def build_voting_problem(
     )
 
     mask = get_graph_padding_mask(graph)
-    labels = (
-        jnp.zeros(mask.shape, dtype=jnp.int32)
-        .at[0]
-        .set(winner)
-    )
+    labels = jnp.zeros(mask.shape, dtype=jnp.int32).at[0].set(winner)
     return Problem(graph=graph, labels=labels, mask=mask)
 
 
@@ -280,12 +266,8 @@ def evaluate(
         for problem in problems
     ]
     return ClassificationMetrics(
-        loss=jnp.mean(
-            jnp.asarray([metric.loss for metric in metrics])
-        ),
-        accuracy=jnp.mean(
-            jnp.asarray([metric.accuracy for metric in metrics])
-        ),
+        loss=jnp.mean(jnp.asarray([metric.loss for metric in metrics])),
+        accuracy=jnp.mean(jnp.asarray([metric.accuracy for metric in metrics])),
     )
 
 
@@ -359,10 +341,7 @@ def train(
                 extrapolation_problems,
             )
             logger.info(
-                (
-                    "step %d in-distribution accuracy %.4f "
-                    "extrapolation accuracy %.4f"
-                ),
+                ("step %d in-distribution accuracy %.4f extrapolation accuracy %.4f"),
                 step,
                 float(in_distribution_metrics.accuracy),
                 float(extrapolation_metrics.accuracy),
@@ -386,10 +365,7 @@ def main() -> None:
     logger.basicConfig(level=logger.INFO, format="%(message)s")
     result = train(num_steps=100_000)
     logger.info(
-        (
-            "final in-distribution accuracy %.4f "
-            "extrapolation accuracy %.4f"
-        ),
+        ("final in-distribution accuracy %.4f extrapolation accuracy %.4f"),
         float(result.in_distribution.accuracy),
         float(result.extrapolation.accuracy),
     )

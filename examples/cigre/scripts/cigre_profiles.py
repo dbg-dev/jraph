@@ -72,9 +72,7 @@ def make_one_day_profiles(seed: int = 0) -> Profiles:
         np.maximum(np.sin(daylight_phase), 0.0) ** 1.5,
         0.0,
     )
-    cloud_factor = 0.90 + _smooth_noise(
-        rng, STEPS_PER_DAY, scale=0.18, window=9
-    )
+    cloud_factor = 0.90 + _smooth_noise(rng, STEPS_PER_DAY, scale=0.18, window=9)
     solar = np.clip(clear_sky * cloud_factor, 0.0, 1.0)
 
     # Wind: a slowly varying stochastic process, not tied to time of day.

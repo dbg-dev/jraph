@@ -934,7 +934,7 @@ def get_fully_connected_graph(
         and n_graph != jax.tree.leaves(global_features)[0].shape[0]
     ):
         raise ValueError("The number of globals is not equal to n_graph.")
-        
+
     senders = []
     receivers = []
     n_edge = []
@@ -982,7 +982,9 @@ def _get_graph_size(graphs_tuple: GraphsTuple):
     return n_node, n_edge, n_graph
 
 
-def _is_over_batch_size(graph: GraphsTuple, graph_batch_size: tuple[int, int, int]) -> bool:
+def _is_over_batch_size(
+    graph: GraphsTuple, graph_batch_size: tuple[int, int, int]
+) -> bool:
     graph_size = _get_graph_size(graph)
     return any(x > y for x, y in zip(graph_size, graph_batch_size))
 

@@ -51,9 +51,7 @@ def train_cora(
         raise ValueError(f"epochs must be positive, got {epochs}")
 
     if log_every < 1:
-        raise ValueError(
-            f"log_every must be positive, got {log_every}"
-        )
+        raise ValueError(f"log_every must be positive, got {log_every}")
 
     graph = dataset.graph
 
@@ -96,11 +94,7 @@ def train_cora(
             dataset.train_mask,
         )
 
-        should_report = (
-            epoch == 1
-            or epoch == epochs
-            or epoch % log_every == 0
-        )
+        should_report = epoch == 1 or epoch == epochs or epoch % log_every == 0
 
         if should_report:
             train_metrics = _to_metrics(
@@ -161,9 +155,7 @@ def train_cora(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Train a two-layer NNX GCN on Cora."
-    )
+    parser = argparse.ArgumentParser(description="Train a two-layer NNX GCN on Cora.")
     parser.add_argument(
         "--data-path",
         type=Path,
@@ -192,10 +184,7 @@ def main() -> None:
         log_every=args.log_every,
     )
 
-    print(
-        f"test_loss={result.test.loss:.4f} "
-        f"test_accuracy={result.test.accuracy:.4f}"
-    )
+    print(f"test_loss={result.test.loss:.4f} test_accuracy={result.test.accuracy:.4f}")
 
 
 if __name__ == "__main__":

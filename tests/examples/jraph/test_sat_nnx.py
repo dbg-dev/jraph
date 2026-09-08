@@ -46,10 +46,7 @@ def test_model_uses_independent_interaction_blocks() -> None:
     assert isinstance(model, sat.SATModel)
     assert len(model.blocks) == 3
     assert model.blocks[0] is not model.blocks[1]
-    assert (
-        model.blocks[0].edge_mlp
-        is not model.blocks[0].node_mlp
-    )
+    assert model.blocks[0].edge_mlp is not model.blocks[0].node_mlp
 
 
 def test_first_and_later_blocks_accept_expected_feature_sizes() -> None:
@@ -69,18 +66,10 @@ def test_first_and_later_blocks_accept_expected_feature_sizes() -> None:
     first_output = model.blocks[0](embedded_graph)
     second_output = model.blocks[1](first_output)
 
-    assert cast(jax.Array, first_output.nodes).shape[-1] == (
-        sat.MESSAGE_FEATURES
-    )
-    assert cast(jax.Array, first_output.edges).shape[-1] == (
-        sat.MESSAGE_FEATURES
-    )
-    assert cast(jax.Array, second_output.nodes).shape[-1] == (
-        sat.MESSAGE_FEATURES
-    )
-    assert cast(jax.Array, second_output.edges).shape[-1] == (
-        sat.MESSAGE_FEATURES
-    )
+    assert cast(jax.Array, first_output.nodes).shape[-1] == (sat.MESSAGE_FEATURES)
+    assert cast(jax.Array, first_output.edges).shape[-1] == (sat.MESSAGE_FEATURES)
+    assert cast(jax.Array, second_output.nodes).shape[-1] == (sat.MESSAGE_FEATURES)
+    assert cast(jax.Array, second_output.edges).shape[-1] == (sat.MESSAGE_FEATURES)
 
 
 def test_eager_and_nnx_jit_match() -> None:
@@ -88,9 +77,7 @@ def test_eager_and_nnx_jit_match() -> None:
     model = sat.build_model(seed=42)
 
     eager = model(problem.graph)
-    jitted_call = nnx.jit(
-        lambda current_model, graph: current_model(graph)
-    )
+    jitted_call = nnx.jit(lambda current_model, graph: current_model(graph))
     jitted = jitted_call(model, problem.graph)
 
     np.testing.assert_allclose(
@@ -125,12 +112,8 @@ def test_padding_graph_does_not_affect_literal_logits() -> None:
     n_real_edges = int(np.asarray(problem.graph.n_edge)[0])
 
     changed_graph = problem.graph._replace(
-        nodes=nodes.at[n_real_nodes:].set(
-            jnp.full_like(nodes[n_real_nodes:], 7.0)
-        ),
-        edges=edges.at[n_real_edges:].set(
-            jnp.full_like(edges[n_real_edges:], -3.0)
-        ),
+        nodes=nodes.at[n_real_nodes:].set(jnp.full_like(nodes[n_real_nodes:], 7.0)),
+        edges=edges.at[n_real_edges:].set(jnp.full_like(edges[n_real_edges:], -3.0)),
     )
 
     original_logits = model(problem.graph)
@@ -232,9 +215,7 @@ def test_logging_frequency_does_not_change_training() -> None:
     ("call", "message"),
     [
         (
-            lambda: sat.build_model(
-                num_message_passing_steps=0
-            ),
+            lambda: sat.build_model(num_message_passing_steps=0),
             "num_message_passing_steps must be positive",
         ),
         (

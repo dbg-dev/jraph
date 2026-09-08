@@ -132,9 +132,7 @@ def _get_random_graph(
         if include_edge_features
         else None
     )
-    globals_ = (
-        jnp.asarray(rng.random((n_graph, 5))) if include_globals else None
-    )
+    globals_ = jnp.asarray(rng.random((n_graph, 5))) if include_globals else None
 
     return GraphsTuple(
         n_node=jnp.asarray(n_node),
@@ -147,8 +145,7 @@ def _get_random_graph(
     )
 
 
-def _get_list_and_batched_graph(
-) -> tuple[list[GraphsTuple], GraphsTuple]:
+def _get_list_and_batched_graph() -> tuple[list[GraphsTuple], GraphsTuple]:
     """Return individual graphs and their expected batched representation."""
     batched_graph = GraphsTuple(
         n_node=jnp.array([1, 3, 1, 0, 2, 0, 0]),
@@ -235,7 +232,7 @@ def _get_list_and_batched_graph(
             receivers=jnp.array([], dtype=jnp.int32),
         ),
         # An entirely empty GraphsTuple is accepted by batch(), but unbatch()
-        # deliberately omits it because it contains no 
+        # deliberately omits it because it contains no
         GraphsTuple(
             n_node=jnp.array([], dtype=jnp.int32),
             n_edge=jnp.array([], dtype=jnp.int32),
@@ -350,27 +347,19 @@ def test_pad_with_graphs_matches_expected() -> None:
         n_node=jnp.concatenate([graphs.n_node, jnp.array([3, 0])]),
         n_edge=jnp.concatenate([graphs.n_edge, jnp.array([4, 0])]),
         nodes=jax.tree.map(
-            lambda leaf: jnp.concatenate(
-                [leaf, jnp.zeros((3, 2), dtype=leaf.dtype)]
-            ),
+            lambda leaf: jnp.concatenate([leaf, jnp.zeros((3, 2), dtype=leaf.dtype)]),
             graphs.nodes,
         ),
         edges=jax.tree.map(
-            lambda leaf: jnp.concatenate(
-                [leaf, jnp.zeros((4, 3), dtype=leaf.dtype)]
-            ),
+            lambda leaf: jnp.concatenate([leaf, jnp.zeros((4, 3), dtype=leaf.dtype)]),
             graphs.edges,
         ),
         globals=jax.tree.map(
-            lambda leaf: jnp.concatenate(
-                [leaf, jnp.zeros((2, 2), dtype=leaf.dtype)]
-            ),
+            lambda leaf: jnp.concatenate([leaf, jnp.zeros((2, 2), dtype=leaf.dtype)]),
             graphs.globals,
         ),
         senders=jnp.concatenate([graphs.senders, jnp.array([7, 7, 7, 7])]),
-        receivers=jnp.concatenate(
-            [graphs.receivers, jnp.array([7, 7, 7, 7])]
-        ),
+        receivers=jnp.concatenate([graphs.receivers, jnp.array([7, 7, 7, 7])]),
     )
 
     _assert_tree_allclose(actual, expected)
@@ -761,9 +750,7 @@ def _apply_segment_function(
     *,
     use_jit: bool,
 ) -> jax.Array:
-    apply_fn = (
-        jax.jit(function, static_argnums=(2, 3, 4)) if use_jit else function
-    )
+    apply_fn = jax.jit(function, static_argnums=(2, 3, 4)) if use_jit else function
     return apply_fn(
         data,
         segment_ids,
@@ -1104,9 +1091,7 @@ def test_segment_softmax_with_explicit_num_segments(
         expected = expected.at[jnp.array([0, 3, 5, 8])].set(jnp.nan)
 
     apply_fn = (
-        jax.jit(segment_softmax, static_argnums=2)
-        if use_jit
-        else segment_softmax
+        jax.jit(segment_softmax, static_argnums=2) if use_jit else segment_softmax
     )
     np.testing.assert_allclose(apply_fn(data, segment_ids, 6), expected)
 
@@ -1155,9 +1140,7 @@ def test_partition_softmax_with_explicit_partition_sum(use_jit: bool) -> None:
     )
 
     apply_fn = (
-        jax.jit(partition_softmax, static_argnums=2)
-        if use_jit
-        else partition_softmax
+        jax.jit(partition_softmax, static_argnums=2) if use_jit else partition_softmax
     )
     np.testing.assert_allclose(
         apply_fn(data, partitions, 9),
@@ -1221,9 +1204,7 @@ def test_get_fully_connected_graph_shapes(
     use_jit: bool,
 ) -> None:
     rng = np.random.default_rng(42)
-    node_features = (
-        rng.random((n_node * n_graph, 32)) if include_nodes else None
-    )
+    node_features = rng.random((n_node * n_graph, 32)) if include_nodes else None
     global_features = rng.random((n_graph, 32)) if include_globals else None
 
     apply_fn = (
@@ -1395,8 +1376,7 @@ def test_concatenated_args(
         args_shapes,
     )
     kwargs = {
-        name: rng.normal(size=tuple(shape))
-        for name, shape in kwargs_shapes.items()
+        name: rng.normal(size=tuple(shape)) for name, shape in kwargs_shapes.items()
     }
 
     @concatenated_args(axis=axis)
@@ -1432,17 +1412,11 @@ def _make_dynamic_batch_graph(
 ) -> GraphsTuple:
     total_num_nodes = sum(num_nodes)
     total_num_edges = sum(num_edges)
-    globals_ = (
-        _make_nest(rng.normal(size=_DB_GLOBAL_SHAPE)) if add_globals else {}
-    )
+    globals_ = _make_nest(rng.normal(size=_DB_GLOBAL_SHAPE)) if add_globals else {}
 
     return GraphsTuple(
-        nodes=_make_nest(
-            rng.normal(size=(total_num_nodes, *_DB_NODE_SHAPE))
-        ),
-        edges=_make_nest(
-            rng.normal(size=(total_num_edges, *_DB_EDGE_SHAPE))
-        ),
+        nodes=_make_nest(rng.normal(size=(total_num_nodes, *_DB_NODE_SHAPE))),
+        edges=_make_nest(rng.normal(size=(total_num_edges, *_DB_EDGE_SHAPE))),
         n_edge=np.array(num_edges),
         n_node=np.array(num_nodes),
         senders=rng.integers(
@@ -1516,10 +1490,7 @@ def test_dynamically_batch(
     batch_kwargs: dict[str, int],
 ) -> None:
     rng = np.random.default_rng(42)
-    graphs = [
-        _make_dynamic_batch_graph(rng, add_globals=use_globals)
-        for _ in range(4)
-    ]
+    graphs = [_make_dynamic_batch_graph(rng, add_globals=use_globals) for _ in range(4)]
     input_graphs = [*graphs, *unbatch_np(graphs[-1])]
 
     graph_batches = list(dynamically_batch(iter(input_graphs), **batch_kwargs))

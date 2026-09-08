@@ -163,9 +163,7 @@ class SATModel(nnx.Module):
         rngs: nnx.Rngs,
     ) -> None:
         if num_message_passing_steps < 1:
-            raise ValueError(
-                "num_message_passing_steps must be positive"
-            )
+            raise ValueError("num_message_passing_steps must be positive")
 
         self.node_embedder = nnx.Linear(
             INPUT_FEATURES,
@@ -227,13 +225,9 @@ def get_2sat_problem(
     if min_n_literals < 2:
         raise ValueError("min_n_literals must be at least 2")
     if max_n_literals < min_n_literals:
-        raise ValueError(
-            "max_n_literals must be at least min_n_literals"
-        )
+        raise ValueError("max_n_literals must be at least min_n_literals")
 
-    n_literals = int(
-        rng.integers(min_n_literals, max_n_literals + 1)
-    )
+    n_literals = int(rng.integers(min_n_literals, max_n_literals + 1))
     n_literals_true = int(rng.integers(1, n_literals))
     n_constraints = n_literals * (n_literals - 1) // 2
     n_node = n_literals + n_constraints
@@ -263,12 +257,8 @@ def get_2sat_problem(
             [2 * n_constraints],
             dtype=jnp.int32,
         ),
-        nodes=jnp.eye(INPUT_FEATURES, dtype=jnp.float32)[
-            jnp.asarray(node_types)
-        ],
-        edges=jnp.eye(INPUT_FEATURES, dtype=jnp.float32)[
-            jnp.asarray(edge_types)
-        ],
+        nodes=jnp.eye(INPUT_FEATURES, dtype=jnp.float32)[jnp.asarray(node_types)],
+        edges=jnp.eye(INPUT_FEATURES, dtype=jnp.float32)[jnp.asarray(edge_types)],
         globals=None,
         senders=jnp.asarray(senders, dtype=jnp.int32),
         receivers=jnp.repeat(
@@ -277,9 +267,7 @@ def get_2sat_problem(
         ),
     )
 
-    max_n_constraints = (
-        max_n_literals * (max_n_literals - 1) // 2
-    )
+    max_n_constraints = max_n_literals * (max_n_literals - 1) // 2
     max_nodes = max_n_literals + max_n_constraints + 1
     max_edges = 2 * max_n_constraints
     graph = pad_with_graphs_as_jax(
@@ -288,9 +276,9 @@ def get_2sat_problem(
         n_edge=max_edges,
     )
 
-    labels = (
-        jnp.arange(max_nodes, dtype=jnp.int32) < n_literals_true
-    ).astype(jnp.int32)
+    labels = (jnp.arange(max_nodes, dtype=jnp.int32) < n_literals_true).astype(
+        jnp.int32
+    )
     mask = jnp.arange(max_nodes) < n_literals
     return Problem(graph=graph, labels=labels, mask=mask)
 
@@ -324,12 +312,8 @@ def evaluate(
         for problem in problems
     ]
     return ClassificationMetrics(
-        loss=jnp.mean(
-            jnp.asarray([metric.loss for metric in metrics])
-        ),
-        accuracy=jnp.mean(
-            jnp.asarray([metric.accuracy for metric in metrics])
-        ),
+        loss=jnp.mean(jnp.asarray([metric.loss for metric in metrics])),
+        accuracy=jnp.mean(jnp.asarray([metric.accuracy for metric in metrics])),
     )
 
 

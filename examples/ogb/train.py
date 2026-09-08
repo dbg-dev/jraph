@@ -37,7 +37,7 @@ Chemical Science, 9(2):513–530, 2018.
 
 Example usage:
 
-uv run python train.py -h 
+uv run python train.py -h
 
 to get CLI help
 """
@@ -63,6 +63,7 @@ from examples.ogb._training import (
 from jraph import GraphMapFeatures, GraphNetwork, GraphsTuple, concatenated_args
 
 logger = logging.getLogger(__name__)
+
 
 @concatenated_args
 def edge_update_fn(feats: jnp.ndarray) -> jnp.ndarray:
@@ -190,7 +191,7 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
     net = hk.without_apply_rng(hk.transform(net_fn))
     with pathlib.Path(save_dir, "molhiv.pkl").open("rb") as fp:
         params = pickle.load(fp)
-    
+
     # We jit the computation of our loss, since this is the main computation.
     # Using jax.jit means that we will use a single accelerator. If you want
     # to use more than 1 accelerator, use jax.pmap. More information can be
@@ -211,74 +212,72 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
     return loss, accuracy
 
 
-
 def parse_args() -> argparse.Namespace:
-  common_parser = argparse.ArgumentParser(add_help=False)
-  common_parser.add_argument("--data_path", help="Directory of the data.")
-  common_parser.add_argument(
-      "--split_path",
-      help="Path to the data split indices.",
-  )
-  common_parser.add_argument(
-      "--master_csv_path",
-      help="Path to OGB master.csv.",
-  )
-  common_parser.add_argument(
-      "--save_dir",
-      help="Directory to save parameters to.",
-  )
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument("--data_path", help="Directory of the data.")
+    common_parser.add_argument(
+        "--split_path",
+        help="Path to the data split indices.",
+    )
+    common_parser.add_argument(
+        "--master_csv_path",
+        help="Path to OGB master.csv.",
+    )
+    common_parser.add_argument(
+        "--save_dir",
+        help="Directory to save parameters to.",
+    )
 
-  parser = argparse.ArgumentParser()
-  subparsers = parser.add_subparsers(dest="command", required=True)
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-  train_parser = subparsers.add_parser(
-      "train",
-      parents=[common_parser],
-      help="Train the model.",
-  )
-  train_parser.add_argument(
-      "--batch_size",
-      type=int,
-      default=1,
-      help="Number of graphs in batch.",
-  )
-  train_parser.add_argument(
-      "--num_training_steps",
-      type=int,
-      default=1000,
-      help="Number of training steps.",
-  )
+    train_parser = subparsers.add_parser(
+        "train",
+        parents=[common_parser],
+        help="Train the model.",
+    )
+    train_parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=1,
+        help="Number of graphs in batch.",
+    )
+    train_parser.add_argument(
+        "--num_training_steps",
+        type=int,
+        default=1000,
+        help="Number of training steps.",
+    )
 
-  subparsers.add_parser(
-      "evaluate",
-      parents=[common_parser],
-      help="Evaluate the model.",
-  )
+    subparsers.add_parser(
+        "evaluate",
+        parents=[common_parser],
+        help="Evaluate the model.",
+    )
 
-  return parser.parse_args()
+    return parser.parse_args()
 
 
 def main() -> None:
-  args = parse_args()
+    args = parse_args()
 
-  if args.command == "train":
-    train(
-        args.data_path,
-        args.master_csv_path,
-        args.split_path,
-        args.batch_size,
-        args.num_training_steps,
-        args.save_dir,
-    )
-  elif args.command == "evaluate":
-    evaluate(
-        args.data_path,
-        args.master_csv_path,
-        args.split_path,
-        args.save_dir,
-    )
+    if args.command == "train":
+        train(
+            args.data_path,
+            args.master_csv_path,
+            args.split_path,
+            args.batch_size,
+            args.num_training_steps,
+            args.save_dir,
+        )
+    elif args.command == "evaluate":
+        evaluate(
+            args.data_path,
+            args.master_csv_path,
+            args.split_path,
+            args.save_dir,
+        )
 
 
 if __name__ == "__main__":
-  main()
-
+    main()

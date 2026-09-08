@@ -19,9 +19,7 @@ class TwoLayerGCN(nnx.Module):
         rngs: nnx.Rngs,
     ) -> None:
         if not 0.0 <= dropout_rate < 1.0:
-            raise ValueError(
-                f"dropout_rate must be in [0, 1), got {dropout_rate}"
-            )
+            raise ValueError(f"dropout_rate must be in [0, 1), got {dropout_rate}")
 
         self.linear1: nnx.Linear = nnx.Linear(
             in_features=in_features,

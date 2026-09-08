@@ -36,9 +36,7 @@ def masked_classification_metrics(
     """Compute mean cross-entropy and accuracy over selected examples."""
 
     if logits.shape[:-1] != labels.shape:
-        raise ValueError(
-            "labels must have the same leading shape as logits"
-        )
+        raise ValueError("labels must have the same leading shape as logits")
     if mask.shape != labels.shape:
         raise ValueError("mask must have the same shape as labels")
 
@@ -52,9 +50,7 @@ def masked_classification_metrics(
     loss = jnp.sum(per_item_loss * weights) / denominator
 
     correct = jnp.argmax(logits, axis=-1) == labels
-    accuracy = (
-        jnp.sum(correct.astype(logits.dtype) * weights) / denominator
-    )
+    accuracy = jnp.sum(correct.astype(logits.dtype) * weights) / denominator
     return ClassificationMetrics(loss=loss, accuracy=accuracy)
 
 

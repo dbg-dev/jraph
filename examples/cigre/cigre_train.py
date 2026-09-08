@@ -112,10 +112,7 @@ def iter_batches(
 ) -> Sequence[np.ndarray]:
     """Yield only full batches to keep compiled shapes constant."""
     n_full = len(indices) // batch_size
-    return [
-        indices[i * batch_size : (i + 1) * batch_size]
-        for i in range(n_full)
-    ]
+    return [indices[i * batch_size : (i + 1) * batch_size] for i in range(n_full)]
 
 
 @nnx.jit
@@ -169,9 +166,7 @@ def evaluate_standardized(
         expected.append(np.asarray(batch.target))
 
     if not losses:
-        raise ValueError(
-            f"Split has fewer than one full batch of size {batch_size}"
-        )
+        raise ValueError(f"Split has fewer than one full batch of size {batch_size}")
 
     return (
         float(np.mean(losses)),
@@ -188,15 +183,9 @@ def regression_metrics(
     mae = float(np.mean(np.abs(error)))
     rmse = float(np.sqrt(np.mean(error**2)))
 
-    denominator = float(
-        np.sum((y_true - np.mean(y_true)) ** 2)
-    )
+    denominator = float(np.sum((y_true - np.mean(y_true)) ** 2))
     numerator = float(np.sum(error**2))
-    r2 = (
-        float("nan")
-        if denominator == 0.0
-        else 1.0 - numerator / denominator
-    )
+    r2 = float("nan") if denominator == 0.0 else 1.0 - numerator / denominator
 
     return Metrics(mae=mae, rmse=rmse, r2=r2)
 
@@ -212,22 +201,12 @@ def print_metrics(
     )
 
     print("\nTest-set performance in physical units")
-    print(
-        f"{'target':33s}"
-        f"{'MAE':>12s}"
-        f"{'RMSE':>12s}"
-        f"{'R^2':>12s}"
-    )
+    print(f"{'target':33s}{'MAE':>12s}{'RMSE':>12s}{'R^2':>12s}")
     print("-" * 69)
 
     for i, label in enumerate(labels):
         metrics = regression_metrics(y_true[:, i], y_pred[:, i])
-        print(
-            f"{label:33s}"
-            f"{metrics.mae:12.5f}"
-            f"{metrics.rmse:12.5f}"
-            f"{metrics.r2:12.5f}"
-        )
+        print(f"{label:33s}{metrics.mae:12.5f}{metrics.rmse:12.5f}{metrics.r2:12.5f}")
 
 
 def print_stressed_metrics(
@@ -257,11 +236,7 @@ def print_stressed_metrics(
             y_true[mask, target_index],
             y_pred[mask, target_index],
         )
-        print(
-            f"  MAE={metrics.mae:.5f}  "
-            f"RMSE={metrics.rmse:.5f}  "
-            f"R^2={metrics.r2:.5f}"
-        )
+        print(f"  MAE={metrics.mae:.5f}  RMSE={metrics.rmse:.5f}  R^2={metrics.r2:.5f}")
 
 
 def copy_params(model: CigreGraphNetwork) -> nnx.State:
@@ -386,12 +361,8 @@ def main() -> None:
         batch_size=args.batch_size,
     )
 
-    test_prediction = np.asarray(
-        dataset.inverse_target(test_prediction_z)
-    )
-    test_target = np.asarray(
-        dataset.inverse_target(test_target_z)
-    )
+    test_prediction = np.asarray(dataset.inverse_target(test_prediction_z))
+    test_target = np.asarray(dataset.inverse_target(test_target_z))
 
     print(f"Test standardized MSE: {test_loss:.6f}")
 

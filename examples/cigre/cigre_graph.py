@@ -100,8 +100,7 @@ def parse_args() -> argparse.Namespace:
 def _element_closed(net, *, element_type: str, element_index: int) -> bool:
     """True when no open switch disconnects this line/transformer."""
     switches = net.switch[
-        (net.switch["et"] == element_type)
-        & (net.switch["element"] == element_index)
+        (net.switch["et"] == element_type) & (net.switch["element"] == element_index)
     ]
     return bool(switches.empty or switches["closed"].all())
 
@@ -119,26 +118,16 @@ def _line_branch(net, index: int) -> PhysicalBranch:
     #   R_pu = R_ohm / Z_base
     z_base_ohm = vn_kv**2 / float(net.sn_mva)
     r_pu = (
-        float(line["r_ohm_per_km"])
-        * float(line["length_km"])
-        / parallel
-        / z_base_ohm
+        float(line["r_ohm_per_km"]) * float(line["length_km"]) / parallel / z_base_ohm
     )
     x_pu = (
-        float(line["x_ohm_per_km"])
-        * float(line["length_km"])
-        / parallel
-        / z_base_ohm
+        float(line["x_ohm_per_km"]) * float(line["length_km"]) / parallel / z_base_ohm
     )
 
     # Equivalent current rating expressed on the common apparent-power base.
     # This is the line current limit at 1.0 pu bus voltage.
     rating_mva = (
-        np.sqrt(3.0)
-        * vn_kv
-        * float(line["max_i_ka"])
-        * float(line["df"])
-        * parallel
+        np.sqrt(3.0) * vn_kv * float(line["max_i_ka"]) * float(line["df"]) * parallel
     )
     rating_pu = rating_mva / float(net.sn_mva)
 
@@ -180,36 +169,15 @@ def _transformer_branch(net, index: int) -> PhysicalBranch:
     # tap_lv = (V_trafo_lv / V_bus_lv)^2 * S_net
     # z_sc   = vk%  / 100 / S_trafo * tap_lv
     # r_sc   = vkr% / 100 / S_trafo * tap_lv
-    tap_lv = (
-        (vn_trafo_lv_kv / vn_lv_bus_kv) ** 2
-        * float(net.sn_mva)
-    )
-    z_pu = (
-        float(trafo["vk_percent"])
-        / 100.0
-        / sn_trafo_mva
-        * tap_lv
-        / parallel
-    )
-    r_pu = (
-        float(trafo["vkr_percent"])
-        / 100.0
-        / sn_trafo_mva
-        * tap_lv
-        / parallel
-    )
+    tap_lv = (vn_trafo_lv_kv / vn_lv_bus_kv) ** 2 * float(net.sn_mva)
+    z_pu = float(trafo["vk_percent"]) / 100.0 / sn_trafo_mva * tap_lv / parallel
+    r_pu = float(trafo["vkr_percent"]) / 100.0 / sn_trafo_mva * tap_lv / parallel
     x_squared = z_pu**2 - r_pu**2
     if x_squared < -1e-12:
-        raise ValueError(
-            f"Transformer {index} has impossible vk/vkr values"
-        )
+        raise ValueError(f"Transformer {index} has impossible vk/vkr values")
     x_pu = float(np.sqrt(max(x_squared, 0.0)))
 
-    rating_mva = (
-        sn_trafo_mva
-        * float(trafo["df"])
-        * parallel
-    )
+    rating_mva = sn_trafo_mva * float(trafo["df"]) * parallel
     rating_pu = rating_mva / float(net.sn_mva)
 
     return PhysicalBranch(
@@ -343,15 +311,12 @@ def load_sample(path: Path, index: int) -> GraphSample:
         missing = required.difference(data.files)
         if missing:
             raise KeyError(
-                "Dataset is missing required arrays: "
-                + ", ".join(sorted(missing))
+                "Dataset is missing required arrays: " + ", ".join(sorted(missing))
             )
 
         n_samples = len(data["p_net_mw"])
         if not 0 <= index < n_samples:
-            raise IndexError(
-                f"Sample index {index} outside [0, {n_samples})"
-            )
+            raise IndexError(f"Sample index {index} outside [0, {n_samples})")
 
         p_net_mw = np.asarray(data["p_net_mw"][index], dtype=np.float64)
         q_net_mvar = np.asarray(data["q_net_mvar"][index], dtype=np.float64)

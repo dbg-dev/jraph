@@ -31,9 +31,7 @@ def test_pad_with_graphs_as_jax_normalizes_array_leaves() -> None:
 
     nodes = padded.nodes
     assert isinstance(nodes, jax.Array)
-    updated_nodes = nodes.at[0].set(
-        np.asarray([2.0, 2.0, 2.0], dtype=np.float32)
-    )
+    updated_nodes = nodes.at[0].set(np.asarray([2.0, 2.0, 2.0], dtype=np.float32))
     np.testing.assert_array_equal(
         updated_nodes[0],
         np.asarray([2.0, 2.0, 2.0], dtype=np.float32),

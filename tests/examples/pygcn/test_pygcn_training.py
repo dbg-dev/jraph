@@ -16,15 +16,10 @@ from examples.pygcn.training import (
     train_step,
 )
 
-DATA_PATH = (
-    Path(__file__).parents[3]
-    / "examples"
-    / "pygcn"
-    / "data"
-    / "cora"
-)
+DATA_PATH = Path(__file__).parents[3] / "examples" / "pygcn" / "data" / "cora"
 
 print(DATA_PATH)
+
 
 def make_model() -> TwoLayerGCN:
     return TwoLayerGCN(
@@ -86,14 +81,8 @@ def test_loss_produces_finite_parameter_gradients() -> None:
     grad_leaves = jax.tree.leaves(grad_state)
 
     assert grad_leaves
-    assert all(
-        bool(jnp.all(jnp.isfinite(gradient)))
-        for gradient in grad_leaves
-    )
-    assert any(
-        bool(jnp.any(gradient != 0))
-        for gradient in grad_leaves
-    )
+    assert all(bool(jnp.all(jnp.isfinite(gradient))) for gradient in grad_leaves)
+    assert any(bool(jnp.any(gradient != 0)) for gradient in grad_leaves)
 
 
 def test_compiled_loss_and_grad_match_eager_execution() -> None:

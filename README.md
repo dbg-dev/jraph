@@ -136,7 +136,7 @@ of nodes, edges or graphs within the `Graphstuple` respectively.
 
 ```python
 node_targets = jnp.array([[True], [False], [True]])
-graph = graph._replace(nodes={'inputs': graph.nodes, 'targets': node_targets})
+graph = graph._replace(nodes={"inputs": graph.nodes, "targets": node_targets})
 ```
 
 ### Using the Model Zoo
@@ -154,7 +154,7 @@ the node features of the `sender` and `receiver` and the `global` features.
 ```python
 # As one example, we just pass the edge features straight through.
 def update_edge_fn(edge, sender, receiver, globals_):
-  return edge
+    return edge
 ```
 
 Often we use the concatenation of these features, and `jraph` provides an easy
@@ -163,7 +163,7 @@ way of doing this with the `concatenated_args` decorator.
 ```python
 @jraph.concatenated_args
 def update_edge_fn(concatenated_features):
-  return concatenated_features
+    return concatenated_features
 ```
 Typically, a learned model such as a Multi-Layer Perceptron is used within an
 update function.
@@ -173,9 +173,11 @@ are then used to configure a `GraphNetwork`. To see the arguments to the node
 and global `update_fns` please take a look at the model zoo.
 
 ```python
-net = jraph.GraphNetwork(update_edge_fn=update_edge_fn,
-                         update_node_fn=update_node_fn,
-                         update_global_fn=update_global_fn)
+net = jraph.GraphNetwork(
+    update_edge_fn=update_edge_fn,
+    update_node_fn=update_node_fn,
+    update_global_fn=update_global_fn,
+)
 ```
 
 `net` is a function that sends messages according to the `GraphNetwork` algorithm

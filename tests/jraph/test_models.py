@@ -372,10 +372,9 @@ def _apply_gat(
         edge_attributes: Any,
     ) -> jax.Array:
         del edge_attributes
-        return (
-            (sender_attributes == receiver_attributes)
-            + (sender_attributes != receiver_attributes) * -1e10
-        )
+        return (sender_attributes == receiver_attributes) + (
+            sender_attributes != receiver_attributes
+        ) * -1e10
 
     def node_update_fn(nodes: jax.Array) -> jax.Array:
         return jnp.mean(nodes, axis=2)

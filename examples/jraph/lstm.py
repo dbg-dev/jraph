@@ -75,9 +75,7 @@ def get_random_graph(
             dtype=jnp.float32,
         ),
         globals=None,
-        senders=jnp.asarray(
-            rng.integers(0, num_nodes, size=num_edges, dtype=np.int32)
-        ),
+        senders=jnp.asarray(rng.integers(0, num_nodes, size=num_edges, dtype=np.int32)),
         receivers=jnp.asarray(
             rng.integers(0, num_nodes, size=num_edges, dtype=np.int32)
         ),
