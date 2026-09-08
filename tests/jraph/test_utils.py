@@ -1522,20 +1522,20 @@ def test_dynamically_batch(
     ]
     input_graphs = [*graphs, *unbatch_np(graphs[-1])]
 
-    batches = list(dynamically_batch(iter(input_graphs), **batch_kwargs))
+    graph_batches = list(dynamically_batch(iter(input_graphs), **batch_kwargs))
 
-    assert len(batches) == 5
-    for batch in batches:
-        for nodes in jax.tree.leaves(batch.nodes):
+    assert len(graph_batches) == 5
+    for graph_batch in graph_batches:
+        for nodes in jax.tree.leaves(graph_batch.nodes):
             assert nodes.shape[0] == batch_kwargs["n_node"]
-        for edges in jax.tree.leaves(batch.edges):
+        for edges in jax.tree.leaves(graph_batch.edges):
             assert edges.shape[0] == batch_kwargs["n_edge"]
 
-        assert len(batch.n_node) == batch_kwargs["n_graph"]
-        assert int(get_number_of_padding_with_graphs_nodes(batch)) == (
+        assert len(graph_batch.n_node) == batch_kwargs["n_graph"]
+        assert int(get_number_of_padding_with_graphs_nodes(graph_batch)) == (
             batch_kwargs["n_node"] - sum(_DB_NUM_NODES)
         )
-        assert int(get_number_of_padding_with_graphs_edges(batch)) == (
+        assert int(get_number_of_padding_with_graphs_edges(graph_batch)) == (
             batch_kwargs["n_edge"] - sum(_DB_NUM_EDGES)
         )
 
