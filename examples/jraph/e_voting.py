@@ -37,7 +37,13 @@ from examples.jraph._train import (
     eval_step,
     train_step,
 )
-from jraph import DeepSets, GraphsTuple, get_graph_padding_mask, segment_mean, pad_with_graphs
+from jraph import (
+    DeepSets,
+    GraphsTuple,
+    get_graph_padding_mask,
+    pad_with_graphs,
+    segment_mean,
+)
 
 logger = logging.getLogger(__name__)
 
