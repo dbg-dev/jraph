@@ -32,12 +32,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
-[project.urls]
-Repository = "https://github.com/dbg-dev/jraph"
-Issues = "https://github.com/dbg-dev/jraph/issues"
-Upstream = "https://github.com/google-deepmind/jraph"
-
-
 dependencies = [
     "jax>=0.1.55",
     "numpy>=1.18.0",
@@ -54,6 +48,11 @@ examples = [
     "pandas>=3.0.5",
     "scipy>=1.2.1",
 ]
+
+[project.urls]
+Repository = "https://github.com/dbg-dev/jraph"
+Issues = "https://github.com/dbg-dev/jraph/issues"
+Upstream = "https://github.com/google-deepmind/jraph"
 
 [dependency-groups]
 dev = [
