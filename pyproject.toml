@@ -22,15 +22,21 @@ keywords = [
 ]
 
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+
+[project.urls]
+Repository = "https://github.com/dbg-dev/jraph"
+Issues = "https://github.com/dbg-dev/jraph/issues"
+Upstream = "https://github.com/google-deepmind/jraph"
+
 
 dependencies = [
     "jax>=0.1.55",
@@ -49,7 +55,6 @@ examples = [
     "scipy>=1.2.1",
 ]
 
-
 [dependency-groups]
 dev = [
     "basedpyright>=1.39.9",
@@ -57,9 +62,6 @@ dev = [
     "pytest-cov>=7.1.0",
     "ruff>=0.16.2",
 ]
-
-[project.urls]
-Upstream = "https://github.com/google-deepmind/jraph"
 
 [build-system]
 requires = ["uv_build>=0.11.33,<0.12"]
