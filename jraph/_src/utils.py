@@ -14,15 +14,16 @@
 """Utilities for working with `GraphsTuple`s."""
 
 import functools
-from typing import Callable
-from collections.abc import Generator, Iterator, Sequence
+from collections.abc import Callable, Generator, Iterator, Sequence
+
 import jax
-from jax import lax
 import jax.numpy as jnp
 import jax.tree_util as tree
 import numpy as np
-from .types import ArrayTree
+from jax import lax
+
 from .graph import GraphsTuple
+from .types import ArrayTree
 
 
 def segment_sum(
@@ -988,7 +989,7 @@ def dynamically_batch(
     n_node: int,
     n_edge: int,
     n_graph: int,
-) -> Generator[GraphsTuple, None, None]:
+) -> Generator[GraphsTuple]:
     """Dynamically batches trees with `jraph.GraphsTuples` up to specified sizes.
 
 

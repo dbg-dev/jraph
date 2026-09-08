@@ -4,7 +4,6 @@ import numpy as np
 
 from examples.pygcn.cora import load_cora
 
-
 DATA_PATH = Path(__file__).parents[3] / "examples" / "pygcn" / "data" / "cora"
 
 

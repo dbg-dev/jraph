@@ -14,15 +14,14 @@
 
 """Shared training utilities for the OGB examples."""
 
-from collections.abc import Mapping, Callable, Iterator, Iterable
-from typing import cast
+import logging
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from typing import TypeVar, cast
 
 import jax
 import jax.numpy as jnp
 
 import jraph
-import logging
-from typing import TypeVar
 
 
 def _nearest_bigger_power_of_two(x: int) -> int:

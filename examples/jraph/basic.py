@@ -21,22 +21,23 @@ This example demonstrates the core mechanics of Jraph:
 * applying a ``GraphNetwork`` in eager and JIT-compiled modes.
 """
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-import logging
 from typing import Any
 
 import jax
-from jraph import (
-  GraphsTuple,
-  GraphNetwork,
-  batch,
-  unbatch,
-  pad_with_graphs,
-  unpad_with_graphs,
-  segment_sum
-)
 import numpy as np
+
+from jraph import (
+    GraphNetwork,
+    GraphsTuple,
+    batch,
+    pad_with_graphs,
+    segment_sum,
+    unbatch,
+    unpad_with_graphs,
+)
 
 
 @dataclass(frozen=True)

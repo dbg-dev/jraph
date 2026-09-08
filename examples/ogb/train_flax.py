@@ -59,18 +59,20 @@ import logging
 import pathlib
 import pickle
 from collections.abc import Sequence
-from flax import linen as nn
+
 import jax
 import jax.numpy as jnp
-import jraph
 import optax
+from flax import linen as nn
 
+import jraph
 from examples.ogb import data_utils
 from examples.ogb._training import (
-    loss_and_accuracy,
-    run_evaluation,
-    run_training,
+  loss_and_accuracy,
+  run_evaluation,
+  run_training,
 )
+
 
 def parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser()

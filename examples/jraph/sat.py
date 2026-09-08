@@ -17,16 +17,15 @@ The graph is bipartite: literal nodes connect to constraint nodes. Edge
 features indicate whether a literal is positive or negated in its constraint.
 """
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import NamedTuple, cast
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
-from jraph import GraphsTuple, InteractionNetwork
 import numpy as np
 import optax
+from flax import nnx
 
 from examples.jraph._graphs import pad_with_graphs_as_jax
 from examples.jraph._random import make_random_streams
@@ -35,7 +34,7 @@ from examples.jraph._train import (
     eval_step,
     train_step,
 )
-
+from jraph import GraphsTuple, InteractionNetwork
 
 TRAIN_DATASET = (2, 15)
 TEST_DATASET = (16, 20)

@@ -42,28 +42,25 @@ uv run python train.py -h
 to get CLI help
 """
 
+import argparse
 import functools
 import logging
 import pathlib
 import pickle
-import argparse
+
 import haiku as hk
 import jax
 import jax.numpy as jnp
-from jraph import (
-    GraphNetwork,
-    GraphsTuple,
-    GraphMapFeatures,
-    concatenated_args
-)
+import optax
+
 from examples.ogb import data_utils
 from examples.ogb._training import (
-    loss_and_accuracy,
     StepMetrics,
-    run_training,
+    loss_and_accuracy,
     run_evaluation,
+    run_training,
 )
-import optax
+from jraph import GraphMapFeatures, GraphNetwork, GraphsTuple, concatenated_args
 
 
 @concatenated_args

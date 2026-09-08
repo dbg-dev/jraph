@@ -22,17 +22,16 @@ import numpy as np
 import pytest
 
 from jraph import (
-    GraphsTuple,
-    GraphNetwork,
-    GraphNetGAT,
-    InteractionNetwork,
-    GraphMapFeatures,
-    RelationNetwork,
-    DeepSets,
     GAT,
-    segment_sum
+    DeepSets,
+    GraphMapFeatures,
+    GraphNetGAT,
+    GraphNetwork,
+    GraphsTuple,
+    InteractionNetwork,
+    RelationNetwork,
+    segment_sum,
 )
-
 
 type GraphApplyFn = Callable[[GraphsTuple], GraphsTuple]
 type GraphExpectedFn = Callable[[GraphsTuple], tuple[GraphsTuple, GraphsTuple]]

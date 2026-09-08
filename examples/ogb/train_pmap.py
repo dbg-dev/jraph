@@ -44,21 +44,20 @@ uv run python train_pmap.py -h
 to get CLI help
 """
 
+import argparse
 import functools
 import logging
 import pathlib
 import pickle
 from collections.abc import Iterable, Iterator
 
-
-import argparse
 import haiku as hk
 import jax
 import jax.numpy as jnp
-import jraph
 import numpy as np
 import optax
 
+import jraph
 from examples.ogb import data_utils
 from examples.ogb._training import loss_and_accuracy
 

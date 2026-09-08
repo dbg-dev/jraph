@@ -14,13 +14,16 @@
 """Sharded (Data Parallel) Graph Nets."""
 
 import functools
-from typing import Callable, List, NamedTuple, Optional
+from collections.abc import Callable
+from typing import NamedTuple
+
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
+import numpy as np
+
 import jraph
 from jraph import ArrayTree, segment_softmax, segment_sum
-import numpy as np
 
 
 class ShardedEdgesGraphsTuple(NamedTuple):
@@ -159,8 +162,8 @@ def graphs_tuple_to_broadcasted_sharded_graphs_tuple(
   # this is all happening in numpy.
   nodes, edges, receivers, senders, globals_, n_node, n_edge = graphs_tuple
   if np.sum(n_edge) % num_shards != 0:
-    raise ValueError(('The number of edges in a `graph.GraphsTuple` must be '
-                      'divisible by the number of devices per replica.'))
+    raise ValueError('The number of edges in a `graph.GraphsTuple` must be '
+                      'divisible by the number of devices per replica.')
   if np.sum(np.array(n_edge)) == 0:
     raise ValueError('The input `Graphstuple` must have edges.')
   # Broadcast replicated features to have a `num_shards` leading axis.
@@ -295,21 +298,21 @@ ShardedEdgeFeatures = ArrayTree
 AggregateShardedEdgesToGlobalsFn = Callable[
     [ShardedEdgeFeatures, jnp.ndarray, int, jnp.ndarray], ArrayTree]
 AggregateShardedEdgesToNodesFn = Callable[
-    [ArrayTree, jnp.ndarray, int, List[List[int]]], jraph.NodeFeatures]
+    [ArrayTree, jnp.ndarray, int, list[list[int]]], jraph.NodeFeatures]
 
 
 # pylint: disable=invalid-name
 def ShardedEdgesGraphNetwork(
-    update_edge_fn: Optional[jraph.GNUpdateEdgeFn],
-    update_node_fn: Optional[jraph.GNUpdateNodeFn],
-    update_global_fn: Optional[jraph.GNUpdateGlobalFn] = None,
+    update_edge_fn: jraph.GNUpdateEdgeFn | None,
+    update_node_fn: jraph.GNUpdateNodeFn | None,
+    update_global_fn: jraph.GNUpdateGlobalFn | None = None,
     aggregate_edges_for_nodes_fn:
     AggregateShardedEdgesToNodesFn = sharded_segment_sum,
     aggregate_nodes_for_globals_fn: jraph.AggregateNodesToGlobalsFn = jax.ops.segment_sum,
     aggregate_edges_for_globals_fn:
     AggregateShardedEdgesToGlobalsFn = sharded_segment_sum,
-    attention_logit_fn: Optional[jraph.AttentionLogitFn] = None,
-    attention_reduce_fn: Optional[jraph.AttentionReduceFn] = None,
+    attention_logit_fn: jraph.AttentionLogitFn | None = None,
+    attention_reduce_fn: jraph.AttentionReduceFn | None = None,
     num_shards: int = 1):
   """Returns a method that applies a GraphNetwork on a sharded GraphsTuple.
 
@@ -354,8 +357,8 @@ def ShardedEdgesGraphNetwork(
   """
   not_both_supplied = lambda x, y: (x != y) and ((x is None) or (y is None))
   if not_both_supplied(attention_reduce_fn, attention_logit_fn):
-    raise ValueError(('attention_logit_fn and attention_reduce_fn must both be'
-                      ' supplied.'))
+    raise ValueError('attention_logit_fn and attention_reduce_fn must both be'
+                      ' supplied.')
 
   devices = jax.devices()
   num_devices = len(devices)

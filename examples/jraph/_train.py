@@ -2,11 +2,12 @@
 
 from typing import NamedTuple, Protocol, cast
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
-from jraph import GraphsTuple
 import optax
+from flax import nnx
+
+from jraph import GraphsTuple
 
 
 class ClassificationMetrics(NamedTuple):

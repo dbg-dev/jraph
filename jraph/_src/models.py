@@ -15,30 +15,30 @@
 """A library of Graph Neural Network models."""
 
 import functools
-from typing import Callable
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
+
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
 
 from .graph import GraphsTuple
 from .types import (
-    NodeFeatures,
-    EdgeFeatures,
-    SenderFeatures,
-    ReceiverFeatures,
-    Globals,
+    AggregateEdgesToGlobalsFn,
     AggregateEdgesToNodesFn,
     AggregateNodesToGlobalsFn,
-    AggregateEdgesToGlobalsFn,
     AttentionLogitFn,
-    AttentionReduceFn,
     AttentionNormalizeFn,
+    AttentionReduceFn,
+    EdgeFeatures,
+    Globals,
     GNUpdateEdgeFn,
     GNUpdateGlobalFn,
     GNUpdateNodeFn,
+    NodeFeatures,
+    ReceiverFeatures,
+    SenderFeatures,
 )
-from .utils import segment_sum, segment_softmax
+from .utils import segment_softmax, segment_sum
 
 
 def GraphNetwork(
@@ -99,7 +99,7 @@ def GraphNetwork(
 
     if not_both_supplied(attention_reduce_fn, attention_logit_fn):
         raise ValueError(
-            ("attention_logit_fn and attention_reduce_fn must both be supplied.")
+            "attention_logit_fn and attention_reduce_fn must both be supplied."
         )
 
     def _ApplyGraphNet(graph: GraphsTuple) -> GraphsTuple:
@@ -410,10 +410,10 @@ def GraphNetGAT(
     """
     if (attention_logit_fn is None) or (attention_reduce_fn is None):
         raise ValueError(
-            (
+            
                 "`None` value not supported for `attention_logit_fn` or "
                 "`attention_reduce_fn` in a Graph Attention network."
-            )
+            
         )
 
     return GraphNetwork(

@@ -1,13 +1,13 @@
 """Tests for examples.zacharys_karate_club."""
 
-from flax import nnx
 import jax
 import numpy as np
 import pytest
+from flax import nnx
 
+from examples.jraph import zacharys_karate_club
 from examples.pygcn.model import TwoLayerGCN
 from examples.pygcn.training import eval_step
-from examples.jraph import zacharys_karate_club
 
 
 def test_graph_structure() -> None:

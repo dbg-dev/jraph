@@ -15,7 +15,9 @@
 """Graph Data Structures."""
 
 from typing import NamedTuple
+
 from jax import Array
+
 from .types import ArrayTree
 
 

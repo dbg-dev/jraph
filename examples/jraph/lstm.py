@@ -27,9 +27,9 @@ from typing import NamedTuple
 import haiku as hk
 import jax
 import jax.numpy as jnp
-from jraph import GraphsTuple, InteractionNetwork
 import numpy as np
 
+from jraph import GraphsTuple, InteractionNetwork
 
 NUM_NODES = 5
 NUM_EDGES = 7

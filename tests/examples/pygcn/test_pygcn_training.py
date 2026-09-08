@@ -1,21 +1,20 @@
 from pathlib import Path
 
 import jax
-import optax
 import jax.numpy as jnp
 import numpy as np
+import optax
 from flax import nnx
 
 from examples.pygcn.cora import load_cora
 from examples.pygcn.model import TwoLayerGCN
 from examples.pygcn.training import (
+    eval_step,
     loss_fn,
     masked_accuracy,
     masked_cross_entropy,
-    eval_step, 
-    train_step
+    train_step,
 )
-
 
 DATA_PATH = (
     Path(__file__).parents[3]

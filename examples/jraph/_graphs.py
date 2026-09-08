@@ -4,6 +4,7 @@ from typing import cast
 
 import jax
 import jax.numpy as jnp
+
 from jraph import GraphsTuple, pad_with_graphs
 
 

@@ -16,7 +16,7 @@
 
 from pathlib import Path
 
-from examples.ogb.train_flax import train, evaluate
+from examples.ogb.train_flax import evaluate, train
 
 
 def test_train_and_eval_overfit(tmp_path: Path) -> None:

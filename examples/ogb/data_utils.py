@@ -15,9 +15,11 @@
 """Data loading utils for the Open Graph Benchmark (OGB) Mol-Hiv."""
 
 import pathlib
-import jraph
+
 import numpy as np
 import pandas as pd
+
+import jraph
 
 
 class DataReader:

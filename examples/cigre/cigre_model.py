@@ -39,13 +39,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
-import jraph
 import numpy as np
-
 from cigre_dataset import CigreGraphDataset
+from flax import nnx
+
+import jraph
 
 
 class MLP(nnx.Module):

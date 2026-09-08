@@ -23,18 +23,18 @@ Each problem contains either:
 The graph is fully connected and a relation network classifies the whole graph.
 """
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import NamedTuple, cast
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
-import jraph
 import numpy as np
 import optax
 import scipy.stats
+from flax import nnx
 
+import jraph
 from examples.jraph._graphs import pad_with_graphs_as_jax
 from examples.jraph._random import make_random_streams
 from examples.jraph._train import (
@@ -42,7 +42,6 @@ from examples.jraph._train import (
     eval_step,
     train_step,
 )
-
 
 HIGGS_MASS_GEV = 125.18
 HIGGS_LABEL = 0

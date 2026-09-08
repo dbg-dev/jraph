@@ -20,17 +20,16 @@ It goes without saying, but don't use this in a real election!
 Seriously, don't!
 """
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
-import logging
 from typing import NamedTuple, cast
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
-from jraph import GraphsTuple, DeepSets, segment_mean, get_graph_padding_mask
 import numpy as np
 import optax
+from flax import nnx
 
 from examples.jraph._graphs import pad_with_graphs_as_jax
 from examples.jraph._random import make_random_streams
@@ -39,7 +38,7 @@ from examples.jraph._train import (
     eval_step,
     train_step,
 )
-
+from jraph import DeepSets, GraphsTuple, get_graph_padding_mask, segment_mean
 
 NUM_CANDIDATES = 20
 TRAIN_DATASET = (2, 15)

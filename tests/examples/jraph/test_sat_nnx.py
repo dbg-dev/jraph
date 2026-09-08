@@ -2,12 +2,12 @@
 
 from typing import cast
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
 import pytest
+from flax import nnx
 
 from examples.jraph import sat
 from examples.jraph._train import eval_step, train_step

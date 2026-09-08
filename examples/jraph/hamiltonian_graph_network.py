@@ -51,15 +51,15 @@ use `frozendict`s, which we register with `jax.tree_util`.
 """
 
 import functools
-from typing import Callable
+from collections.abc import Callable
 
-from frozendict import frozendict
 import jax
 import jax.numpy as jnp
-from jraph import GraphsTuple, GraphNetwork
 import matplotlib.pyplot as plt
 import numpy as np
+from frozendict import frozendict
 
+from jraph import GraphNetwork, GraphsTuple
 
 # Tell tree_util how to navigate frozendicts.
 jax.tree_util.register_pytree_node(

@@ -19,7 +19,6 @@ import pandapower as pp
 from pandapower.auxiliary import LoadflowNotConverged
 from pandapower.networks import create_cigre_network_mv
 
-
 STEPS_PER_DAY = 96
 
 

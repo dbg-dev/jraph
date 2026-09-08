@@ -4,8 +4,7 @@ import jax
 import numpy as np
 import pytest
 
-from examples.jraph import e_voting
-from examples.jraph import sat
+from examples.jraph import e_voting, sat
 
 
 def _assert_trees_equal(actual: object, expected: object) -> None:

@@ -30,19 +30,19 @@ Useful options:
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
-import jraph
 import numpy as np
 import optax
-
 from cigre_dataset import CigreGraphDataset
 from cigre_model import CigreGraphNetwork, count_parameters
+from flax import nnx
+
+import jraph
 
 
 @dataclass(frozen=True, slots=True)

@@ -11,7 +11,6 @@ from .cora import CoraDataset, load_cora
 from .model import TwoLayerGCN
 from .training import StepMetrics, eval_step, train_step
 
-
 DEFAULT_DATA_PATH = Path(__file__).parent / "data" / "cora"
 
 

@@ -2,9 +2,9 @@
 
 import jax
 import jax.numpy as jnp
-import jraph
 import numpy as np
 
+import jraph
 from examples.jraph._graphs import pad_with_graphs_as_jax
 
 

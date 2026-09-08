@@ -20,8 +20,8 @@ import jax
 import numpy as np
 import pytest
 
-from jraph import GraphsTuple
 from examples.ogb import data_utils
+from jraph import GraphsTuple
 
 
 @pytest.fixture

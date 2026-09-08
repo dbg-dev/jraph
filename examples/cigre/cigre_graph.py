@@ -44,10 +44,10 @@ from pathlib import Path
 
 import jax
 import jax.numpy as jnp
-import jraph
 import numpy as np
 from pandapower.networks import create_cigre_network_mv
 
+import jraph
 
 NODE_FEATURE_NAMES = (
     "p_net_pu",

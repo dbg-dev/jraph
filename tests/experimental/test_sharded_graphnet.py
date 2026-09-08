@@ -14,16 +14,17 @@
 """Tests for sharded graphnet."""
 
 import functools
+
 import jax
 import numpy as np
 import pytest
 
-from jraph import GraphsTuple, GraphNetwork, batch_np, concatenated_args
+from jraph import GraphNetwork, GraphsTuple, batch_np, concatenated_args
 from jraph.experimental.sharded_graphnet import (
-    ShardedEdgesGraphsTuple, 
-    ShardedEdgesGraphNetwork, 
-    graphs_tuple_to_broadcasted_sharded_graphs_tuple, 
-    broadcasted_sharded_graphs_tuple_to_graphs_tuple
+    ShardedEdgesGraphNetwork,
+    ShardedEdgesGraphsTuple,
+    broadcasted_sharded_graphs_tuple_to_graphs_tuple,
+    graphs_tuple_to_broadcasted_sharded_graphs_tuple,
 )
 
 

@@ -36,12 +36,11 @@ from typing import Literal
 
 import jax
 import jax.numpy as jnp
-import jraph
 import numpy as np
+from cigre_graph import build_node_features, build_static_edges
 from pandapower.networks import create_cigre_network_mv
 
-from cigre_graph import build_node_features, build_static_edges
-
+import jraph
 
 TARGET_NAMES = (
     "min_voltage_pu",
@@ -66,7 +65,7 @@ class Standardizer:
         x: np.ndarray,
         *,
         axis: int | tuple[int, ...] = 0,
-    ) -> "Standardizer":
+    ) -> Standardizer:
         mean = np.mean(x, axis=axis)
         scale = np.std(x, axis=axis)
         scale = np.where(scale > 0.0, scale, 1.0)

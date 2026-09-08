@@ -8,7 +8,6 @@ from flax import nnx
 from examples.pygcn.cora import load_cora
 from examples.pygcn.model import TwoLayerGCN
 
-
 DATA_PATH = Path(__file__).parents[3] / "examples" / "pygcn" / "data" / "cora"
 
 

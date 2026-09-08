@@ -40,7 +40,6 @@ import numpy as np
 import optax
 from pandapower.networks import create_cigre_network_mv
 
-
 FEATURE_NAMES = (
     "total_load_p_mw",
     "total_load_q_mvar",
@@ -66,7 +65,7 @@ class Standardizer:
     scale: np.ndarray
 
     @classmethod
-    def fit(cls, x: np.ndarray) -> "Standardizer":
+    def fit(cls, x: np.ndarray) -> Standardizer:
         mean = np.mean(x, axis=0)
         scale = np.std(x, axis=0)
         scale = np.where(scale > 0.0, scale, 1.0)

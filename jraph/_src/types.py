@@ -1,7 +1,6 @@
-import jax
-from typing import Callable, Hashable
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 
+import jax
 
 # As of 04/2020 pytype doesn't support recursive types.
 # pytype: disable=not-supported-yet

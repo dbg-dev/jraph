@@ -19,15 +19,15 @@ implements Conway's update rule.
 """
 
 import argparse
-from collections.abc import Iterable, Sequence
 import math
 import time
+from collections.abc import Iterable, Sequence
 
 import jax
 import jax.numpy as jnp
-from jraph import GraphsTuple, concatenated_args, InteractionNetwork
 import numpy as np
 
+from jraph import GraphsTuple, InteractionNetwork, concatenated_args
 
 DEFAULT_GLIDER = (
     (0, 0),

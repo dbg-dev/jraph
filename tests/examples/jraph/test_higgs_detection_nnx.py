@@ -2,14 +2,14 @@
 
 from typing import cast
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
-import jraph
 import numpy as np
 import optax
 import pytest
+from flax import nnx
 
+import jraph
 from examples.jraph import higgs_detection
 from examples.jraph._train import eval_step, train_step
 

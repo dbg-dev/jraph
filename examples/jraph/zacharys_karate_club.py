@@ -17,19 +17,18 @@ The model is supervised only by the known assignments of Mr. Hi (node 0) and
 John A. (node 33), then evaluated against the full club partition.
 """
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import cast
 
-from flax import nnx
 import jax
 import jax.numpy as jnp
-from jraph import GraphsTuple
 import optax
+from flax import nnx
 
 from examples.pygcn.model import TwoLayerGCN
 from examples.pygcn.training import eval_step, train_step
-
+from jraph import GraphsTuple
 
 NUM_CLUB_MEMBERS = 34
 NUM_CLASSES = 2
