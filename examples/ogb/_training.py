@@ -23,6 +23,7 @@ import jax.numpy as jnp
 
 import jraph
 
+logger = logging.getLogger(__name__)
 
 def _nearest_bigger_power_of_two(x: int) -> int:
     """Computes the nearest power of two greater than x."""
@@ -124,7 +125,7 @@ def run_training(
         state, (loss, accuracy) = train_step(state, graph, labels)
 
         if step % 100 == 0:
-            logging.info(
+            logger.info(
                 "step: %s, loss: %s, acc: %s",
                 step,
                 loss,
@@ -157,7 +158,7 @@ def run_evaluation(
         num_batches += 1
 
         if num_batches % 100 == 0:
-            logging.info("Evaluated %s graph batches", num_batches)
+            logger.info("Evaluated %s graph batches", num_batches)
 
     if num_batches == 0:
         raise ValueError("Cannot evaluate an empty dataset.")

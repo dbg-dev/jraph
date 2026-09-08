@@ -61,6 +61,7 @@ import jraph
 from examples.ogb import data_utils
 from examples.ogb._training import loss_and_accuracy
 
+logger = logging.getLogger(__name__)
 
 @jraph.concatenated_args
 def edge_update_fn(feats: jnp.ndarray) -> jnp.ndarray:
@@ -155,7 +156,7 @@ def train(
     graph = reader.get_graph_by_idx(0)
 
     # Initialize the network.
-    logging.info("Initializing network.")
+    logger.info("Initializing network.")
     params = net.init(jax.random.PRNGKey(42), graph)
     # Initialize the optimizer.
     opt_init, opt_update = optax.adam(1e-4)
@@ -212,7 +213,7 @@ def train(
         )
 
         if step % 100 == 0:
-            logging.info(
+            logger.info(
                 "step: %s, loss: %s, acc: %s",
                 step,
                 loss,
@@ -221,15 +222,15 @@ def train(
 
     if save_dir is not None:
         with pathlib.Path(save_dir, "molhiv.pkl").open("wb") as fp:
-            logging.info("Saving model to %s", save_dir)
+            logger.info("Saving model to %s", save_dir)
             pickle.dump(params, fp)
-    logging.info("Training finished")
+    logger.info("Training finished")
 
 
 def evaluate(data_path, master_csv_path, split_path, save_dir):
     """Evaluation Script."""
-    logging.info("Evaluating OGB molviv")
-    logging.info("Dataset split: %s", split_path)
+    logger.info("Evaluating OGB molviv")
+    logger.info("Dataset split: %s", split_path)
     # Initialize the dataset reader.
     reader = data_utils.DataReader(
         data_path=data_path,
@@ -281,7 +282,7 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
         num_graphs += graph_batch.n_node.size - num_padding_graphs
 
         if num_graphs % 100 == 0:
-            logging.info("Evaluated %s graphs", num_graphs)
+            logger.info("Evaluated %s graphs", num_graphs)
 
     if num_graphs == 0:
         raise ValueError("Cannot evaluate an empty dataset.")
@@ -289,8 +290,8 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
     loss = accumulated_loss / num_graphs
     accuracy = accumulated_accuracy / num_graphs
 
-    logging.info("Completed evaluation.")
-    logging.info(
+    logger.info("Completed evaluation.")
+    logger.info(
         "Eval loss: %s, accuracy %s",
         loss,
         accuracy,

@@ -62,6 +62,7 @@ from examples.ogb._training import (
 )
 from jraph import GraphMapFeatures, GraphNetwork, GraphsTuple, concatenated_args
 
+logger = logging.getLogger(__name__)
 
 @concatenated_args
 def edge_update_fn(feats: jnp.ndarray) -> jnp.ndarray:
@@ -124,7 +125,7 @@ def train(
     graph = reader.get_graph_by_idx(0)
 
     # Initialize the network.
-    logging.info("Initializing network.")
+    logger.info("Initializing network.")
     params = net.init(jax.random.PRNGKey(42), graph)
     # Initialize the optimizer.
     opt_init, opt_update = optax.adam(1e-4)
@@ -168,16 +169,16 @@ def train(
 
     if save_dir is not None:
         with pathlib.Path(save_dir, "molhiv.pkl").open("wb") as fp:
-            logging.info("Saving model to %s", save_dir)
+            logger.info("Saving model to %s", save_dir)
             pickle.dump(params, fp)
 
-    logging.info("Training finished")
+    logger.info("Training finished")
 
 
 def evaluate(data_path, master_csv_path, split_path, save_dir):
     """Evaluation Script."""
-    logging.info("Evaluating OGB molviv")
-    logging.info("Dataset split: %s", split_path)
+    logger.info("Evaluating OGB molviv")
+    logger.info("Dataset split: %s", split_path)
     # Initialize the dataset reader.
     reader = data_utils.DataReader(
         data_path=data_path,
@@ -205,8 +206,8 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
         eval_step,
     )
 
-    logging.info("Completed evaluation.")
-    logging.info("Eval loss: %s, accuracy %s", loss, accuracy)
+    logger.info("Completed evaluation.")
+    logger.info("Eval loss: %s, accuracy %s", loss, accuracy)
     return loss, accuracy
 
 

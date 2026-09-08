@@ -30,6 +30,8 @@ from examples.pygcn.model import TwoLayerGCN
 from examples.pygcn.training import eval_step, train_step
 from jraph import GraphsTuple
 
+logger = logging.getLogger(__name__)
+
 NUM_CLUB_MEMBERS = 34
 NUM_CLASSES = 2
 HIDDEN_FEATURES = 5
@@ -196,7 +198,7 @@ def train(
                 labels,
                 full_mask,
             )
-            logging.info(
+            logger.info(
                 "step %d loss %.6f accuracy %.4f",
                 step,
                 float(metrics.loss),
@@ -227,9 +229,9 @@ def train(
 def main() -> None:
     """Run the example with the original training length."""
 
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger.basicConfig(level=logger.INFO, format="%(message)s")
     result = train()
-    logging.info(
+    logger.info(
         "final loss %.6f accuracy %.4f",
         result.final_loss,
         result.final_accuracy,

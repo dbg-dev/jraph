@@ -40,6 +40,8 @@ from examples.jraph._train import (
 )
 from jraph import DeepSets, GraphsTuple, get_graph_padding_mask, segment_mean
 
+logger = logging.getLogger(__name__)
+
 NUM_CANDIDATES = 20
 TRAIN_DATASET = (2, 15)
 TEST_DATASET = (16, 20)
@@ -356,7 +358,7 @@ def train(
                 model,
                 extrapolation_problems,
             )
-            logging.info(
+            logger.info(
                 (
                     "step %d in-distribution accuracy %.4f "
                     "extrapolation accuracy %.4f"
@@ -381,9 +383,9 @@ def train(
 def main() -> None:
     """Run the original long training configuration."""
 
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger.basicConfig(level=logger.INFO, format="%(message)s")
     result = train(num_steps=100_000)
-    logging.info(
+    logger.info(
         (
             "final in-distribution accuracy %.4f "
             "extrapolation accuracy %.4f"

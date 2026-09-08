@@ -39,6 +39,8 @@ from jraph import (
     unpad_with_graphs,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class BasicExampleResult:
@@ -187,22 +189,22 @@ def run(*, log_output: bool = True) -> BasicExampleResult:
     )
 
     if log_output:
-        logging.info("Single graph: %r", result.single_graph)
-        logging.info("Nested graph: %r", result.nested_graph)
-        logging.info("Implicitly batched graph: %r", result.implicitly_batched_graph)
-        logging.info("Unbatched graphs: %r", result.unbatched_graphs)
-        logging.info("Padded graph: %r", result.padded_graph)
-        logging.info("Unpadded graph: %r", result.unpadded_graph)
-        logging.info("Explicitly batched graph: %r", result.explicitly_batched_graph)
-        logging.info("Updated single graph: %r", result.updated_single_graph)
-        logging.info("Updated nested graph: %r", result.updated_nested_graph)
-        logging.info("Updated batched graph: %r", result.updated_batched_graph)
-        logging.info("Updated padded graph: %r", result.updated_padded_graph)
-        logging.info(
+        logger.info("Single graph: %r", result.single_graph)
+        logger.info("Nested graph: %r", result.nested_graph)
+        logger.info("Implicitly batched graph: %r", result.implicitly_batched_graph)
+        logger.info("Unbatched graphs: %r", result.unbatched_graphs)
+        logger.info("Padded graph: %r", result.padded_graph)
+        logger.info("Unpadded graph: %r", result.unpadded_graph)
+        logger.info("Explicitly batched graph: %r", result.explicitly_batched_graph)
+        logger.info("Updated single graph: %r", result.updated_single_graph)
+        logger.info("Updated nested graph: %r", result.updated_nested_graph)
+        logger.info("Updated batched graph: %r", result.updated_batched_graph)
+        logger.info("Updated padded graph: %r", result.updated_padded_graph)
+        logger.info(
             "JIT-updated padded graph: %r",
             result.jitted_updated_padded_graph,
         )
-        logging.info("basic.py complete")
+        logger.info("basic.py complete")
 
     return result
 
@@ -210,7 +212,7 @@ def run(*, log_output: bool = True) -> BasicExampleResult:
 def main() -> None:
     """Runs the example from the command line."""
 
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger.basicConfig(level=logger.INFO, format="%(message)s")
     run()
 
 

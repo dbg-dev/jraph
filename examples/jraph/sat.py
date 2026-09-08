@@ -36,6 +36,8 @@ from examples.jraph._train import (
 )
 from jraph import GraphsTuple, InteractionNetwork
 
+logger = logging.getLogger(__name__)
+
 TRAIN_DATASET = (2, 15)
 TEST_DATASET = (16, 20)
 
@@ -400,7 +402,7 @@ def train(
                 model,
                 extrapolation_problems,
             )
-            logging.info(
+            logger.info(
                 (
                     "step %d in-distribution loss %.4f accuracy %.4f "
                     "extrapolation loss %.4f accuracy %.4f"
@@ -427,9 +429,9 @@ def train(
 def main() -> None:
     """Run the original long training configuration."""
 
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger.basicConfig(level=logger.INFO, format="%(message)s")
     result = train(num_steps=10_000)
-    logging.info(
+    logger.info(
         (
             "final in-distribution loss %.4f accuracy %.4f "
             "extrapolation loss %.4f accuracy %.4f"

@@ -43,6 +43,9 @@ from examples.jraph._train import (
     train_step,
 )
 
+logger = logging.getLogger(__name__)
+
+
 HIGGS_MASS_GEV = 125.18
 HIGGS_LABEL = 0
 BACKGROUND_LABEL = 1
@@ -426,7 +429,7 @@ def train(
                 model,
                 extrapolation_problems,
             )
-            logging.info(
+            logger.info(
                 (
                     "step %d in-distribution loss %.4f accuracy %.4f "
                     "extrapolation loss %.4f accuracy %.4f"
@@ -453,9 +456,9 @@ def train(
 def main() -> None:
     """Run the original long training configuration."""
 
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger.basicConfig(level=logger.INFO, format="%(message)s")
     result = train(num_steps=10_000)
-    logging.info(
+    logger.info(
         (
             "final in-distribution loss %.4f accuracy %.4f "
             "extrapolation loss %.4f accuracy %.4f"
