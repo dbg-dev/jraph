@@ -1,11 +1,11 @@
-name: Test
+name: Check
 
 on:
   push:
   pull_request:
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
 
     strategy:
@@ -19,6 +19,5 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - run: uv sync
-      - run: uv run --locked --extra examples pytest
-      - run: uv build
+      - run: make sync
+      - run: make check

@@ -1,5 +1,5 @@
 UV := uv
-RUN := $(UV) run --extra examples
+RUN := $(UV) run --locked --extra examples
 
 .PHONY: help sync upgrade test test-cov lint typecheck format format-check build clean distclean check
 
@@ -10,7 +10,7 @@ help:
 		'make test         Run the test suite' \
 		'make test-cov     Run the test suite with coverage' \
 		'make lint         Run Ruff lint checks' \
-		'make typecheck    Run basedpyright' \
+		'make typecheck    Run the advisory basedpyright check' \
 		'make format       Apply Ruff fixes and formatting' \
 		'make format-check Check formatting without changing files' \
 		'make build        Build source and wheel distributions' \
@@ -19,7 +19,7 @@ help:
 		'make check        Run all repository checks and build'
 
 sync:
-	$(UV) sync --extra examples
+	$(UV) sync --locked --extra examples
 
 upgrade:
 	$(UV) lock --upgrade
@@ -55,4 +55,8 @@ clean:
 distclean: clean
 	rm -rf .venv
 
-check: format-check lint typecheck test build
+check:
+	$(MAKE) format-check
+	$(MAKE) lint
+	$(MAKE) test
+	$(MAKE) build
