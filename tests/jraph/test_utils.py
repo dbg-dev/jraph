@@ -365,6 +365,42 @@ def test_pad_with_graphs_matches_expected() -> None:
     _assert_tree_allclose(actual, expected)
 
 
+@pytest.mark.parametrize(
+    ("asarray", "array_type"),
+    [
+        pytest.param(np.asarray, np.ndarray, id="numpy"),
+        pytest.param(jnp.asarray, jax.Array, id="jax"),
+    ],
+)
+def test_pad_with_graphs_preserves_array_backend(asarray, array_type) -> None:
+    _, graph = _get_list_and_batched_graph()
+    graph = jax.tree.map(asarray, graph)
+
+    padded = pad_with_graphs(graph, 10, 12, 9)
+
+    input_leaves = jax.tree.leaves(graph)
+    output_leaves = jax.tree.leaves(padded)
+    assert all(isinstance(leaf, array_type) for leaf in output_leaves)
+    assert [leaf.dtype for leaf in output_leaves] == [
+        leaf.dtype for leaf in input_leaves
+    ]
+    _assert_tree_allclose(unpad_with_graphs(padded), graph)
+
+
+def test_pad_with_graphs_preserves_mixed_leaf_backends() -> None:
+    _, graph = _get_list_and_batched_graph()
+    graph = graph._replace(
+        nodes=jax.tree.map(np.asarray, graph.nodes),
+        edges=jax.tree.map(jnp.asarray, graph.edges),
+    )
+
+    padded = pad_with_graphs(graph, 10, 12, 9)
+
+    assert all(isinstance(leaf, np.ndarray) for leaf in jax.tree.leaves(padded.nodes))
+    assert all(isinstance(leaf, jax.Array) for leaf in jax.tree.leaves(padded.edges))
+    _assert_tree_allclose(unpad_with_graphs(padded), graph)
+
+
 def test_unpad_with_graphs_matches_expected() -> None:
     _, graphs = _get_list_and_batched_graph()
 

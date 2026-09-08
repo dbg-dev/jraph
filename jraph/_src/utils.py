@@ -20,7 +20,6 @@ import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
 import numpy as np
-from jax import lax
 
 from .graph import GraphsTuple
 from .types import ArrayTree
@@ -202,7 +201,7 @@ def segment_normalize(
         indices_are_sorted=indices_are_sorted,
         unique_indices=unique_indices,
     )[segment_ids]
-    normalized = (data - means) * lax.rsqrt(
+    normalized = (data - means) * jax.lax.rsqrt(
         jnp.maximum(variances, jnp.array(eps, dtype=variances.dtype))
     )
     return normalized
@@ -606,6 +605,21 @@ def _unbatch(graph: GraphsTuple, np_) -> list[GraphsTuple]:
     ]
 
 
+def _array_module(array):
+    """Returns the Array API namespace associated with an array."""
+    return array.__array_namespace__()
+
+
+def _zeros_for(array, shape):
+    """Creates zeros with the backend and dtype of ``array``."""
+    return _array_module(array).zeros(shape, dtype=array.dtype)
+
+
+def _concatenate_like(arrays):
+    """Concatenates arrays using the backend of the first array."""
+    return _array_module(arrays[0]).concatenate(arrays)
+
+
 def pad_with_graphs(
     graph: GraphsTuple, n_node: int, n_edge: int, n_graph: int = 2
 ) -> GraphsTuple:
@@ -623,7 +637,7 @@ def pad_with_graphs(
     is data-dependent.
 
     Args:
-      graph: ``GraphsTuple`` padded with dummy graph and empty graphs.
+      graph: ``GraphsTuple`` to pad
       n_node: the number of nodes in the padded ``GraphsTuple``.
       n_edge: the number of edges in the padded ``GraphsTuple``.
       n_graph: the number of graphs in the padded ``GraphsTuple``. Default is 2,
@@ -643,9 +657,11 @@ def pad_with_graphs(
         raise ValueError(
             f"n_graph is {n_graph}, which is smaller than minimum value of 2."
         )
-    graph = jax.device_get(graph)
-    pad_n_node = int(n_node - np.sum(graph.n_node))
-    pad_n_edge = int(n_edge - np.sum(graph.n_edge))
+    graph_n_node = int(jax.device_get(graph.n_node.sum()))
+    graph_n_edge = int(jax.device_get(graph.n_edge.sum()))
+
+    pad_n_node = n_node - graph_n_node
+    pad_n_edge = n_edge - graph_n_edge
     pad_n_graph = int(n_graph - graph.n_node.shape[0])
     if pad_n_node <= 0 or pad_n_edge < 0 or pad_n_graph <= 0:
         raise RuntimeError(
@@ -655,36 +671,62 @@ def pad_with_graphs(
 
     pad_n_empty_graph = pad_n_graph - 1
 
-    tree_nodes_pad = lambda leaf: np.zeros(
-        (pad_n_node,) + leaf.shape[1:], dtype=leaf.dtype
-    )
-    tree_edges_pad = lambda leaf: np.zeros(
-        (pad_n_edge,) + leaf.shape[1:], dtype=leaf.dtype
-    )
-    tree_globs_pad = lambda leaf: np.zeros(
-        (pad_n_graph,) + leaf.shape[1:], dtype=leaf.dtype
-    )
+    def pad_leaves(features, count):
+        return tree.tree_map(
+            lambda leaf: _concatenate_like(
+                [leaf, _zeros_for(leaf, (count,) + leaf.shape[1:])],
+            ),
+            features,
+        )
 
-    padding_graph = GraphsTuple(
-        n_node=np.concatenate(
+    n_node_xp = _array_module(graph.n_node)
+    n_edge_xp = _array_module(graph.n_edge)
+    senders_xp = _array_module(graph.senders)
+    receivers_xp = _array_module(graph.receivers)
+
+    return GraphsTuple(
+        n_node=_concatenate_like(
             [
-                np.array([pad_n_node], dtype=np.int32),
-                np.zeros(pad_n_empty_graph, dtype=np.int32),
-            ]
+                graph.n_node,
+                n_node_xp.asarray(
+                    [pad_n_node] + [0] * pad_n_empty_graph,
+                    dtype=graph.n_node.dtype,
+                ),
+            ],
         ),
-        n_edge=np.concatenate(
+        n_edge=_concatenate_like(
             [
-                np.array([pad_n_edge], dtype=np.int32),
-                np.zeros(pad_n_empty_graph, dtype=np.int32),
-            ]
+                graph.n_edge,
+                n_edge_xp.asarray(
+                    [pad_n_edge] + [0] * pad_n_empty_graph,
+                    dtype=graph.n_edge.dtype,
+                ),
+            ],
         ),
-        nodes=tree.tree_map(tree_nodes_pad, graph.nodes),
-        edges=tree.tree_map(tree_edges_pad, graph.edges),
-        globals=tree.tree_map(tree_globs_pad, graph.globals),
-        senders=np.zeros(pad_n_edge, dtype=np.int32),
-        receivers=np.zeros(pad_n_edge, dtype=np.int32),
+        nodes=pad_leaves(graph.nodes, pad_n_node),
+        edges=pad_leaves(graph.edges, pad_n_edge),
+        globals=pad_leaves(graph.globals, pad_n_graph),
+        senders=_concatenate_like(
+            [
+                graph.senders,
+                senders_xp.full(
+                    pad_n_edge,
+                    graph_n_node,
+                    dtype=graph.senders.dtype,
+                ),
+            ],
+        ),
+        receivers=_concatenate_like(
+            [
+                graph.receivers,
+                receivers_xp.full(
+                    pad_n_edge,
+                    graph_n_node,
+                    dtype=graph.receivers.dtype,
+                ),
+            ],
+        ),
     )
-    return _batch([graph, padding_graph], np_=np)
 
 
 def get_number_of_padding_with_graphs_graphs(padded_graph: GraphsTuple) -> int:
