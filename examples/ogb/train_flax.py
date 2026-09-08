@@ -267,10 +267,6 @@ def evaluate(data_path, master_csv_path, split_path, save_dir):
     with pathlib.Path(save_dir, "molhiv.pkl").open("rb") as fp:
         params = pickle.load(fp)
 
-    accumulated_loss = 0
-    accumulated_accuracy = 0
-    idx = 0
-
     # We jit the computation of our loss, since this is the main computation.
     # Using jax.jit means that we will use a single accelerator. If you want
     # to use more than 1 accelerator, use jax.pmap. More information can be
